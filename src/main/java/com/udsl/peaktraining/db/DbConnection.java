@@ -1,10 +1,14 @@
 package com.udsl.peaktraining.db;
 
 import com.udsl.peaktraining.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.*;
 
 public class DbConnection {
+    private static final Logger logger = LogManager.getLogger(DbConnection.class.getName());
+
     private static Connection instance = null;
 
     private static Connection getInstance() throws SQLException {
@@ -105,7 +109,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static String SAVE_COURSE_SQL = "INSERT INTO course_def (name, course_number) VALUES (?, ?)";
+    private static String SAVE_COURSE_SQL = "INSERT INTO course_def (name, description, course_number, def_days, default_cert_id) VALUES (?, ?, ?, 1, 0)";
 
     public static int saveCourse(Course course, Lookups lookups) {
         int generatedkey = 0;
@@ -113,7 +117,8 @@ public class DbConnection {
             Connection conn = getInstance();
             PreparedStatement stmt = conn.prepareStatement(SAVE_COURSE_SQL, Statement.RETURN_GENERATED_KEYS);
             stmt.setString(1, course.getCoursetitle());
-            stmt.setString(2, course.getNextCourseRef());
+            stmt.setString(2, course.getCoursetitle());
+            stmt.setString(3, course.getNextCourseRef());
 
             int inserted = stmt.executeUpdate();
             if (inserted == 1) {
@@ -129,7 +134,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static String SAVE_COURSE_INS_SQL = "INSERT INTO course_ins (course_def_id, instance_number, start_date, days, held_at) VALUES (?, ?, ?, ?, ?)";
+    private static String SAVE_COURSE_INS_SQL = "INSERT INTO course_ins (course_def_id, instance_number, description, start_date, days, held_at) VALUES (?, ?, ?, ?, ?, ?)";
 
 
     public static int saveCourseIns(CourseIns courseIns, Lookups lookups) {
@@ -138,11 +143,12 @@ public class DbConnection {
             Connection conn = getInstance();
             PreparedStatement stmt = conn.prepareStatement(SAVE_COURSE_INS_SQL, Statement.RETURN_GENERATED_KEYS);
 
-            stmt.setInt(1, lookups.getCourseId(courseIns.getOldId()));
+            stmt.setInt(1, lookups.getCourseId(courseIns.getCourseTemplateId()));
             stmt.setInt(2, courseIns.getAndSetInstanceNumber());
-            stmt.setDate(3, Date.valueOf(courseIns.getStartDate()));
-            stmt.setInt(4, courseIns.getDays());
-            stmt.setString(5, courseIns.getHeldAt());
+            stmt.setString(3, courseIns.getDescription());
+            stmt.setDate(4, Date.valueOf(courseIns.getStartDate()));
+            stmt.setInt(5, courseIns.getDays());
+            stmt.setString(6, courseIns.getHeldAt());
 
             int inserted = stmt.executeUpdate();
             if (inserted == 1) {
@@ -153,12 +159,13 @@ public class DbConnection {
                 }
             }
         } catch (SQLException throwables) {
+            logger.error("CourseIns: {}", courseIns);
             throwables.printStackTrace();
         }
         return generatedkey;
     }
 
-    private static String SAVE_INSTRUCTOR_SQL = "INSERT INTO instructor (name, reg_number) VALUES (?, ?)";
+    private static String SAVE_INSTRUCTOR_SQL = "INSERT INTO instructor (name, reg_num) VALUES (?, ?)";
 
     public static int saveTrainer(InstructorExaminer instructor, Lookups lookups) {
         int generatedkey = 0;
@@ -182,7 +189,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static String SAVE_EXAMINER_SQL = "INSERT INTO examiner (name, reg_number) VALUES (?, ?)";
+    private static String SAVE_EXAMINER_SQL = "INSERT INTO examiner (name, reg_num) VALUES (?, ?)";
 
     public static int saveExaminer(InstructorExaminer examiner, Lookups lookups) {
         int generatedkey = 0;

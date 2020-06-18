@@ -51,7 +51,7 @@ public class PeakTraingDataMigration {
     }
 
     private void createCourseInst() throws SQLException {
-        String sql = "SELECT [courseId], [TemplateCourseID], [CourseReference], [trainerID], [CourseVenue], [CourseStartDate], [CourseEndDate], [Examiner] FROM [BookedCourses]";
+        String sql = "SELECT [courseId], [TemplateCourseID], [CourseTemplateName], [CourseReference], [trainerID], [CourseVenue], [CourseStartDate], [CourseEndDate], [Examiner] FROM [BookedCourses]";
         ResultSet rs = mAccess.excuteSQL(sql);
         while (rs.next()) {
             CourseIns courseIns = new CourseIns(rs);

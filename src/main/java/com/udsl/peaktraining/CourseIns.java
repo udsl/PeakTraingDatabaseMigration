@@ -20,19 +20,25 @@ public class CourseIns {
 
     private int courseDefId;
     private int oldId;
+    private int courseTemplateId;
+    private int instanceNumbner ;
+    private String description;
     private LocalDate startDate;
     private LocalDate endDate;
     private int days;
     private String heldAt;
-    private int instanceNumbner =0;
 
     public CourseIns(ResultSet rs) {
         try {
             oldId = rs.getInt("courseId");
+            String v = rs.getString("CourseTemplateName");
+            v = v.substring(0, v.indexOf('(')-1);
+            description = v;
             startDate = rs.getDate("CourseStartDate").toLocalDate();
             endDate = rs.getDate("CourseEndDate").toLocalDate();
             days = (int)startDate.until(endDate, DAYS);
             heldAt = rs.getString("CourseVenue");
+            courseTemplateId = rs.getInt("TemplateCourseID");
         } catch (SQLException e) {
             logger.error("Exception creating company - {}", e.getMessage());
         }

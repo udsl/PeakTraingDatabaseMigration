@@ -26,7 +26,7 @@ public class Lookups {
         logger.info("Looking up comany id {}", oldId);
         // is the old ID a duplicate?
         if (dupCompanyMap.containsKey(oldId)){
-            return companyMap.get(dupCompanyMap.get(oldId)).getId();
+            return dupCompanyMap.get(oldId);
         }
         return companyMap.get(oldId).getId();
     }
@@ -49,6 +49,7 @@ public class Lookups {
     }
 
     public int getCourseId(int oldId){
+        logger.debug("oldId {}", oldId);
         return courseMap.get(oldId).getCourseID();
     }
 
