@@ -10,13 +10,13 @@ import java.util.Optional;
 public class Lookups {
     private static final Logger logger = LogManager.getLogger(Lookups.class.getName());
 
-    private Map<Integer, Company> companyMap = new HashMap<>();
-    private Map<Integer, Integer> dupCompanyMap = new HashMap<>();
-    private Map<Integer, Trainee> traineeMap = new HashMap<>();
-    private Map<Integer, Course> courseMap = new HashMap<>();
-    private Map<Integer, InstructorExaminer> trainerMap = new HashMap<>();
-    private Map<Integer, InstructorExaminer> examinerMap = new HashMap<>();
-    private Map<Integer, CourseIns> courseInsMap = new HashMap<>();
+    private final Map<Integer, Company> companyMap = new HashMap<>();
+    private final Map<Integer, Integer> dupCompanyMap = new HashMap<>();
+    private final Map<Integer, Trainee> traineeMap = new HashMap<>();
+    private final Map<Integer, Course> courseMap = new HashMap<>();
+    private final Map<Integer, InstructorExaminer> instructorMap = new HashMap<>();
+    private final Map<Integer, InstructorExaminer> examinerMap = new HashMap<>();
+    private final Map<Integer, CourseIns> courseInsMap = new HashMap<>();
 
     public void addCo(int oldId, Company company) {
         companyMap.put(oldId, company);
@@ -58,7 +58,15 @@ public class Lookups {
     }
 
     public void addTrainer(int oldId, InstructorExaminer trainer) {
-        trainerMap.put(oldId, trainer);
+        instructorMap.put(oldId, trainer);
+    }
+
+    public int getInstructor(int oldId){
+        return instructorMap.get(oldId).getId();
+    }
+
+    public int getExaminer(int oldId){
+        return examinerMap.get(oldId).getId();
     }
 
     public void addExaminer(int oldId, InstructorExaminer examiner) {

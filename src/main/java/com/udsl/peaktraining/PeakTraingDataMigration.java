@@ -25,7 +25,6 @@ public class PeakTraingDataMigration {
             DbConnection.startTrans();
             app.createCompanys();
             app.createTrainees();
-            DbConnection.startTrans();
             app.createTrainers(); // Old system trainers and examiners where same list of people
             app.createCourseDef();
             app.createCourseInst();

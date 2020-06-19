@@ -48,7 +48,7 @@ public class DbConnection {
                 ResultSet rs = stmt.getGeneratedKeys();
                 if (rs.next()) {
                     generatedkey = rs.getInt(1);
-                    System.out.println("Auto Generated Company Primary Key " + generatedkey);
+                    logger.info("Auto Generated Company Primary Key {}", generatedkey);
                 }
             }
         } catch (SQLException throwables) {
@@ -75,7 +75,7 @@ public class DbConnection {
                 ResultSet rs = stmt.getGeneratedKeys();
                 if (rs.next()) {
                     generatedkey = rs.getInt(1);
-                    System.out.println("Auto Generated Contact Primary Key " + generatedkey);
+                    logger.info("Auto Generated Contact Primary Key {}", generatedkey);
                 }
             }
         } catch (SQLException throwables) {
@@ -100,7 +100,7 @@ public class DbConnection {
                 ResultSet rs = stmt.getGeneratedKeys();
                 if (rs.next()) {
                     generatedkey = rs.getInt(1);
-                    System.out.println("Auto Generated Trainee Primary Key " + generatedkey);
+                    logger.info("Auto Generated Trainee Primary Key {}", generatedkey);
                 }
             }
         } catch (SQLException throwables) {
@@ -125,7 +125,7 @@ public class DbConnection {
                 ResultSet rs = stmt.getGeneratedKeys();
                 if (rs.next()) {
                     generatedkey = rs.getInt(1);
-                    System.out.println("Auto Generated Course Primary Key " + generatedkey);
+                    logger.info("Auto Generated Course Primary Key {}", generatedkey);
                 }
             }
         } catch (SQLException throwables) {
@@ -155,7 +155,7 @@ public class DbConnection {
                 ResultSet rs = stmt.getGeneratedKeys();
                 if (rs.next()) {
                     generatedkey = rs.getInt(1);
-                    System.out.println("Auto Generated Course Primary Key " + generatedkey);
+                    logger.info("Auto Generated Course Primary Key {}", generatedkey);
                 }
             }
         } catch (SQLException throwables) {
@@ -180,7 +180,7 @@ public class DbConnection {
                 ResultSet rs = stmt.getGeneratedKeys();
                 if (rs.next()) {
                     generatedkey = rs.getInt(1);
-                    System.out.println("Auto Generated Instructor Primary Key " + generatedkey);
+                    logger.info("Auto Generated Instructor Primary Key {}", generatedkey);
                 }
             }
         } catch (SQLException throwables) {
@@ -204,7 +204,7 @@ public class DbConnection {
                 ResultSet rs = stmt.getGeneratedKeys();
                 if (rs.next()) {
                     generatedkey = rs.getInt(1);
-                    System.out.println("Auto Generated Examiner Primary Key " + generatedkey);
+                    logger.info("Auto Generated Examiner Primary Key {}", generatedkey);
                 }
             }
         } catch (SQLException throwables) {

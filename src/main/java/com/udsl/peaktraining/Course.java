@@ -20,6 +20,7 @@ public class Course {
     private String Coursetitle;
     private String certificatePrefix;
     private int certificateCount;
+    private int examiner;
 
     public Course(ResultSet rs) {
         try {
