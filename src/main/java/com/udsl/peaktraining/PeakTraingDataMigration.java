@@ -14,7 +14,7 @@ import java.util.Optional;
 public class PeakTraingDataMigration {
     private static final Logger logger = LogManager.getLogger(PeakTraingDataMigration.class.getName());
 
-    String knowDuplicates[] = {"IAN YOUNG", "GARRY SHAW ROOFING SERVICES", "EKSPAN", "DARREN EDWARDS"};
+    String[] knowDuplicates = {"IAN YOUNG", "GARRY SHAW ROOFING SERVICES", "EKSPAN", "DARREN EDWARDS"};
 
     Lookups lookups = new Lookups();
     MSAccess mAccess = new MSAccess();
@@ -25,23 +25,22 @@ public class PeakTraingDataMigration {
             DbConnection.startTrans();
             app.createCompanys();
             app.createTrainees();
-            app.createTrainers(); // Old system trainers and examiners where same list of people
+            app.createInstructorTrainers(); // Old system trainers and examiners where same list of people
             app.createCourseDef();
             app.createCourseInst();
-        }
-        finally{
+        } finally {
             DbConnection.doRollback();
         }
     }
 
-    private void createTrainers() throws SQLException {
+    private void createInstructorTrainers() throws SQLException {
         String sql = "SELECT [TrainerID], [Firstname], [Surname], [RegNumber] FROM [Trainers]";
         ResultSet rs = mAccess.excuteSQL(sql);
         while (rs.next()) {
             InstructorExaminer trainer = new InstructorExaminer(rs);
             int trainerId = DbConnection.saveTrainer(trainer, lookups);
             trainer.setId(trainerId);
-            lookups.addTrainer(trainer.getOldId(), trainer);
+            lookups.addInstructor(trainer.getOldId(), trainer);
             InstructorExaminer examiner = new InstructorExaminer(rs);
             int examinerId = DbConnection.saveExaminer(examiner, lookups);
             examiner.setId(examinerId);
@@ -76,11 +75,10 @@ public class PeakTraingDataMigration {
         ResultSet rs = mAccess.excuteSQL(sql);
         while (rs.next()) {
             String name = rs.getString("name");
-            boolean a = Arrays.stream(knowDuplicates).anyMatch(n -> (name.equals(n)));
-            if (Arrays.stream(knowDuplicates).anyMatch(n -> (name.equals(n)))){
+            if (Arrays.asList(knowDuplicates).contains(name)) {
                 logger.info("Known duplicate '{}' found - checking to see if already added", name);
                 Optional<Company> co = lookups.getCompany(name);
-                if (co.isPresent()){
+                if (co.isPresent()) {
                     logger.info("Already added");
                     // Already added, save the ID and carry on
                     int duplicateCoID = rs.getInt("companyID");

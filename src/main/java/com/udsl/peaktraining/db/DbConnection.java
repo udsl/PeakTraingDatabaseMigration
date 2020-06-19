@@ -30,7 +30,7 @@ public class DbConnection {
         getInstance().rollback();
     }
 
-    private static String SAVE_COMPANY_SQL = "INSERT INTO company (company_name, addr1, addr2, addr3, addr4, postcode) VALUES (?, ?, ?, ?, ?, ?)";
+    private static final String SAVE_COMPANY_SQL = "INSERT INTO company (company_name, addr1, addr2, addr3, addr4, postcode) VALUES (?, ?, ?, ?, ?, ?)";
 
     public static int saveCompany(Company company) {
         int generatedkey = 0;
@@ -57,7 +57,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static String SAVE_CONTACT_SQL = "INSERT INTO contact (company_id, name, email, phone, mobile) VALUES (?, ?, ?, ?, ?)";
+    private static final String SAVE_CONTACT_SQL = "INSERT INTO contact (company_id, name, email, phone, mobile) VALUES (?, ?, ?, ?, ?)";
 
     public static int saveContact(Contact contact) {
         int generatedkey = 0;
@@ -84,7 +84,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static String SAVE_TRAINEE_SQL = "INSERT INTO trainee (company_id, forename, surname) VALUES (?, ?, ?)";
+    private static final String SAVE_TRAINEE_SQL = "INSERT INTO trainee (company_id, forename, surname) VALUES (?, ?, ?)";
 
     public static int saveTrainee(Trainee trainee, Lookups lookups) {
         int generatedkey = 0;
@@ -109,7 +109,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static String SAVE_COURSE_SQL = "INSERT INTO course_def (name, description, course_number, def_days, default_cert_id) VALUES (?, ?, ?, 1, 0)";
+    private static final String SAVE_COURSE_SQL = "INSERT INTO course_def (name, description, course_number, def_days, default_cert_id) VALUES (?, ?, ?, 1, 0)";
 
     public static int saveCourse(Course course, Lookups lookups) {
         int generatedkey = 0;
@@ -134,7 +134,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static String SAVE_COURSE_INS_SQL = "INSERT INTO course_ins (course_def_id, instance_number, description, start_date, days, held_at) VALUES (?, ?, ?, ?, ?, ?)";
+    private static final String SAVE_COURSE_INS_SQL = "INSERT INTO course_ins (course_def_id, instance_number, description, start_date, days, held_at, instructor_id, examiner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
 
     public static int saveCourseIns(CourseIns courseIns, Lookups lookups) {
@@ -149,6 +149,9 @@ public class DbConnection {
             stmt.setDate(4, Date.valueOf(courseIns.getStartDate()));
             stmt.setInt(5, courseIns.getDays());
             stmt.setString(6, courseIns.getHeldAt());
+            // Old system only has examiner so set Instructor and Examiner to same value.
+            stmt.setInt(7, lookups.getInstructor(courseIns.getExaminer()));
+            stmt.setInt(8, lookups.getExaminer(courseIns.getExaminer()));
 
             int inserted = stmt.executeUpdate();
             if (inserted == 1) {
@@ -165,7 +168,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static String SAVE_INSTRUCTOR_SQL = "INSERT INTO instructor (name, reg_num) VALUES (?, ?)";
+    private static final String SAVE_INSTRUCTOR_SQL = "INSERT INTO instructor (name, reg_num) VALUES (?, ?)";
 
     public static int saveTrainer(InstructorExaminer instructor, Lookups lookups) {
         int generatedkey = 0;
@@ -189,7 +192,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static String SAVE_EXAMINER_SQL = "INSERT INTO examiner (name, reg_num) VALUES (?, ?)";
+    private static final String SAVE_EXAMINER_SQL = "INSERT INTO examiner (name, reg_num) VALUES (?, ?)";
 
     public static int saveExaminer(InstructorExaminer examiner, Lookups lookups) {
         int generatedkey = 0;
@@ -213,4 +216,16 @@ public class DbConnection {
         return generatedkey;
     }
 
+    public static void logResultset(ResultSet rs) throws SQLException {
+        ResultSetMetaData rsmd = rs.getMetaData();
+        int columnsNumber = rsmd.getColumnCount();
+        StringBuilder str = new StringBuilder();
+        for (int i = 1; i <= columnsNumber; i++) {
+            if (i > 1) str.append(",  ");
+            str.append(rsmd.getColumnName(i));
+            str.append(" = ");
+            str.append(rs.getString(i));
+        }
+        logger.info("Result set = '{}'", str);
+    }
 }

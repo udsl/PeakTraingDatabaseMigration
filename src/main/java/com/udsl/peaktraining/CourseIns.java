@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.time.LocalDate;
 
@@ -27,6 +28,7 @@ public class CourseIns {
     private LocalDate endDate;
     private int days;
     private String heldAt;
+    private int examiner;
 
     public CourseIns(ResultSet rs) {
         try {
@@ -39,6 +41,8 @@ public class CourseIns {
             days = (int)startDate.until(endDate, DAYS);
             heldAt = rs.getString("CourseVenue");
             courseTemplateId = rs.getInt("TemplateCourseID");
+            examiner = rs.getInt("Examiner");
+            examiner = examiner == 0?1:examiner;
         } catch (SQLException e) {
             logger.error("Exception creating company - {}", e.getMessage());
         }

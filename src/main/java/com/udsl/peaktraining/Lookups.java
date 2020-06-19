@@ -49,7 +49,7 @@ public class Lookups {
     }
 
     public int getCourseId(int oldId){
-        logger.debug("oldId {}", oldId);
+        logger.debug("Looking up Course id {}", oldId);
         return courseMap.get(oldId).getCourseID();
     }
 
@@ -57,15 +57,17 @@ public class Lookups {
         courseMap.put(oldId, course);
     }
 
-    public void addTrainer(int oldId, InstructorExaminer trainer) {
-        instructorMap.put(oldId, trainer);
+    public void addInstructor(int oldId, InstructorExaminer instructor) {
+        instructorMap.put(oldId, instructor);
     }
 
     public int getInstructor(int oldId){
+        logger.debug("Looking up Instructor id {}", oldId);
         return instructorMap.get(oldId).getId();
     }
 
     public int getExaminer(int oldId){
+        logger.debug("Looking up Examiner id {}", oldId);
         return examinerMap.get(oldId).getId();
     }
 
