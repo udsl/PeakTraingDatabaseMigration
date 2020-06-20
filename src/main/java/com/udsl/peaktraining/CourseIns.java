@@ -19,7 +19,7 @@ public class CourseIns {
 
     private static int nextInstanceNumbner = 1;
 
-    private int courseDefId;
+    private int id;
     private int oldId;
     private int courseTemplateId;
     private int instanceNumbner ;
@@ -49,7 +49,7 @@ public class CourseIns {
     }
 
     public void setId(int id) {
-        this.courseDefId = id;
+        this.id = id;
     }
 
     public int getAndSetInstanceNumber(){
