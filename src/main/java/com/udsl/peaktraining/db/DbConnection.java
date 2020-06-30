@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.*;
+import java.util.List;
 
 public class DbConnection {
     private static final Logger logger = LogManager.getLogger(DbConnection.class.getName());
@@ -126,7 +127,6 @@ public class DbConnection {
     }
 
     private static final String SAVE_COURSE_INS_SQL = "INSERT INTO course_ins (course_def_id, instance_number, description, start_date, days, held_at, instructor_id, examiner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-
 
     public static int saveCourseIns(CourseIns courseIns, Lookups lookups) throws SQLException {
         int generatedkey = 0;
@@ -254,6 +254,25 @@ public class DbConnection {
         Connection conn = getInstance();
         PreparedStatement stmt = conn.prepareStatement(SAVE_CERTIFICATE_DEF_SQL);
         stmt.executeUpdate();
+    }
+
+    private static final String GET_COURSE_INS_COUT_SQL = "SELECT count(*) from course_ins WHERE course_def_id = ?";
+    private static final String UPDATE_COURSE_DEF_SQL = "UPDATE course_def SET next_instance = ? WHERE course_def_id = ?";
+
+    public static void updateCourseDef(List<Integer> courseDefIdList) throws SQLException {
+        Connection conn = getInstance();
+        PreparedStatement stmt = conn.prepareStatement(GET_COURSE_INS_COUT_SQL);
+        PreparedStatement stmtUpdate = conn.prepareStatement(UPDATE_COURSE_DEF_SQL);
+        for(Integer id : courseDefIdList) {
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            rs.next();
+            int count = rs.getInt(1);
+            logger.info("Found {} records for course def {}", count, id);
+            stmtUpdate.setInt(1, count);
+            stmtUpdate.setInt(2, id);
+            stmtUpdate.executeUpdate();
+        }
     }
 
     /**

@@ -7,8 +7,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 
 public class PeakTraingDataMigration {
@@ -29,6 +32,7 @@ public class PeakTraingDataMigration {
             app.createInstructorTrainers(); // Old system trainers and examiners where same list of people
             app.createCourseDef();
             app.createCourseInst();
+            app.updateCourseDef();
             app.createNoneCertificate();
             app.processAttendants();
         } catch (Exception e) {
@@ -111,6 +115,13 @@ public class PeakTraingDataMigration {
                 lookups.addCourseIns(courseIns.getOldId(), courseIns);
             }
         }
+    }
+
+
+    private void updateCourseDef() throws SQLException {
+        logger.debug("Updating course definitions with next instance number");
+        List<Integer> courseIds = lookups.getCourseDefIds();
+        DbConnection.updateCourseDef(courseIds);
     }
 
     private void createCourseDef() throws SQLException {

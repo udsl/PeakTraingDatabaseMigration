@@ -3,9 +3,8 @@ package com.udsl.peaktraining;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.LongStream;
 
 public class Lookups {
     private static final Logger logger = LogManager.getLogger(Lookups.class.getName());
@@ -69,6 +68,14 @@ public class Lookups {
         int courseInsId = courseIns.getId();
         logger.debug("Returning courseInsId {}", courseInsId);
         return courseInsId;
+    }
+
+    public List<Integer> getCourseDefIds(){
+        List<Integer> result = new ArrayList<>();
+        for (Map.Entry<Integer, Course> entry : courseMap.entrySet()) {
+            result.add(entry.getValue().getCourseID());
+        }
+        return result;
     }
 
     public int getCourseDefId(int oldId){
