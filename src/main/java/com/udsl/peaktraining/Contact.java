@@ -28,7 +28,7 @@ public class Contact {
 
     public Contact(int companyId, ResultSet rs) throws DataException {
         this.companyId = companyId;
-        name = getValueOrNull( "name", rs);
+        name = getValueOrNull( "contact", rs);
         if (name == null){
             throw new DataException();
         }

@@ -14,7 +14,10 @@ public class DbConnection {
 
     private static Connection getInstance() throws SQLException {
         if (instance == null) {
-            instance = DriverManager.getConnection("jdbc:postgresql://smilodon:5432/postgres", "iangodman", "password");
+          // Home
+          instance = DriverManager.getConnection("jdbc:postgresql://smilodon:5432/postgres", "iangodman", "password");
+          // Peak Training
+          // instance = DriverManager.getConnection("jdbc:postgresql://192.168.1.127:5432/postgres", "postgres", "password");
         }
         return instance;
     }
@@ -222,8 +225,21 @@ public class DbConnection {
         PreparedStatement stmt = conn.prepareStatement(SAVE_COURSE_RESULTS_SQL);
         stmt.setInt(1, attendee.getId());
         stmt.setBoolean(2, attendee.isPassed());
-        stmt.setInt(3, attendee.getTheory());
-        stmt.setInt(4, attendee.getPracticalFaults());
+
+        if (attendee.getTheory() == null) {
+            stmt.setInt(3, 0);
+        }
+        else {
+            stmt.setInt(3, attendee.getTheory());
+        }
+
+        if (attendee.getPracticalFaults() == null) {
+            stmt.setNull(4, java.sql.Types.INTEGER);
+        }
+        else {
+            stmt.setInt(4, attendee.getPracticalFaults());
+        }
+
         StringBuilder str = new StringBuilder();
         String failReason = attendee.getFailReason();
         if (failReason != null && failReason.length() > 0) {
