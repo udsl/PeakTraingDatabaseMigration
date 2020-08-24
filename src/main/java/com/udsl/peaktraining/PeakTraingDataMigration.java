@@ -7,12 +7,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.IntStream;
-
 
 public class PeakTraingDataMigration {
     private static final Logger logger = LogManager.getLogger(PeakTraingDataMigration.class.getName());
@@ -20,13 +16,13 @@ public class PeakTraingDataMigration {
 
     String[] knowDuplicates = {"IAN YOUNG", "GARRY SHAW ROOFING SERVICES", "EKSPAN", "DARREN EDWARDS"};
 
-    Lookups lookups = new Lookups();
-    MSAccess mAccess = new MSAccess();
+    Lookups lookups ;
+    MSAccess mAccess ;
 
     public static void main(String[] args) throws SQLException {
+        logger.info("Peak Training data migration starting . . .");
+        PeakTraingDataMigration app = new PeakTraingDataMigration();
         try {
-            logger.info("Peak Training data migration starting . . .");
-            PeakTraingDataMigration app = new PeakTraingDataMigration();
             app.createCompanys();
             app.createTrainees();
             app.createInstructorTrainers(); // Old system trainers and examiners where same list of people
@@ -38,10 +34,20 @@ public class PeakTraingDataMigration {
         } catch (Exception e) {
             logger.error("Caught exception {}", e.getMessage(), e);
         } finally {
-            DbConnection.closeConection();
+            app.closeConection();
         }
+        logger.info("END!");
     }
 
+    PeakTraingDataMigration() throws SQLException {
+        lookups = new Lookups();
+        mAccess = new MSAccess();
+    }
+
+    void closeConection() throws SQLException {
+        DbConnection.closeConection();
+        lookups.closeConection();
+    }
     /**
      * Create certificate zero. Used to idnicate the certificate was not transfered from the original system (because there was no record of it!).
      */
@@ -80,7 +86,7 @@ public class PeakTraingDataMigration {
                     Attendants attendee = new Attendants(rs);
                     int attendeeId = DbConnection.saveAttendee(attendee, lookups);
                     attendee.setId(attendeeId);
-                    lookups.addAttendee(attendee.getOldId(), attendee);
+                    lookups.addAttendee(attendee);
                     DbConnection.saveResults(attendee, lookups);
                 }
             }
@@ -112,7 +118,7 @@ public class PeakTraingDataMigration {
                 CourseIns courseIns = new CourseIns(rs);
                 int courseId = DbConnection.saveCourseIns(courseIns, lookups);
                 courseIns.setId(courseId);
-                lookups.addCourseIns(courseIns.getOldId(), courseIns);
+                lookups.addCourseIns(courseIns);
             }
         }
     }
@@ -130,9 +136,9 @@ public class PeakTraingDataMigration {
         try (ResultSet rs = mAccess.excuteSQL(sql)) {
             while (rs.next()) {
                 Course course = new Course(rs);
-                int courseId = DbConnection.saveCourse(course, lookups);
+                int courseId = DbConnection.saveCourse(course);
                 course.setId(courseId);
-                lookups.addCourse(course.getOldId(), course);
+                lookups.addCourse(course);
             }
         }
     }
@@ -143,22 +149,26 @@ public class PeakTraingDataMigration {
         try (ResultSet rs = mAccess.excuteSQL(sql)) {
             while (rs.next()) {
                 String name = rs.getString("name");
+                logger.info("Processing '{}'", name);
                 if (Arrays.asList(knowDuplicates).contains(name)) {
                     logger.info("Known duplicate '{}' found - checking to see if already added", name);
-                    Optional<Company> co = lookups.getCompany(name);
-                    if (co.isPresent()) {
+                    try {
+                        int newId = lookups.getCompanyNewIdByName(name);
                         logger.info("Already added");
                         // Already added, save the ID and carry on
                         int duplicateCoID = rs.getInt("companyID");
-                        lookups.addDupCoId(duplicateCoID, co.get().getId());
-                        logger.info("Old ID {} maping to {} which is duplicate of id {}", duplicateCoID, co.get().getId(), co.get().getName());
+                        lookups.addDupCoId(duplicateCoID, newId);
+                        logger.info("Old ID {} maping to {} which is duplicate of id {}", duplicateCoID, newId, name);
                         continue;
+                    }
+                    catch (Exception e) {
+                        logger.error("Exception looking up company name", e);
                     }
                 }
                 Company company = new Company(rs);
                 int id = DbConnection.saveCompany(company);
                 company.setId(id);
-                lookups.addCo(company.getOldId(), company);
+                lookups.addCo(company);
                 logger.info("Company created - {}", company.toString());
                 try {
                     Contact contact = new Contact(id, rs);
@@ -168,6 +178,10 @@ public class PeakTraingDataMigration {
                     logger.error("Contact not created!");
                 }
             }
+            logger.info("While was false!");
+        }
+        catch(Exception e){
+            logger.error("Exception!", e);
         }
     }
 
@@ -180,7 +194,7 @@ public class PeakTraingDataMigration {
                 int traineeId = DbConnection.saveTrainee(trainee, lookups);
                 trainee.setId(traineeId);
                 logger.info("Trainee created - {}", trainee.toString());
-                lookups.addTrainee(trainee.getOldId(), trainee);
+                lookups.addTrainee(trainee);
             }
         }
     }

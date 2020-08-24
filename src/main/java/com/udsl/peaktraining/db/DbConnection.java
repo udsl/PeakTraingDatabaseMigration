@@ -110,7 +110,7 @@ public class DbConnection {
 
     private static final String SAVE_COURSE_SQL = "INSERT INTO course_def (name, description, course_number, def_days, default_cert_id) VALUES (?, ?, ?, 1, 0)";
 
-    public static int saveCourse(Course course, Lookups lookups) throws SQLException {
+    public static int saveCourse(Course course) throws SQLException {
         int generatedkey = 0;
         Connection conn = getInstance();
         PreparedStatement stmt = conn.prepareStatement(SAVE_COURSE_SQL, Statement.RETURN_GENERATED_KEYS);
@@ -132,6 +132,7 @@ public class DbConnection {
     private static final String SAVE_COURSE_INS_SQL = "INSERT INTO course_ins (course_def_id, instance_number, description, start_date, days, held_at, instructor_id, examiner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
     public static int saveCourseIns(CourseIns courseIns, Lookups lookups) throws SQLException {
+        logger.info("Saving courseIns: {}", courseIns);
         int generatedkey = 0;
         Connection conn = getInstance();
         PreparedStatement stmt = conn.prepareStatement(SAVE_COURSE_INS_SQL, Statement.RETURN_GENERATED_KEYS);
@@ -321,6 +322,4 @@ public class DbConnection {
             logger.debug("Result set = '{}'", resultsetFieldsAndValuesToString(rs));
         }
     }
-
-
 }

@@ -1,11 +1,10 @@
 package com.udsl.peaktraining.db;
 
-import com.udsl.peaktraining.PeakTraingDataMigration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.*;
-import java.util.Optional;
+
 
 public class MSAccess {
     private static final Logger logger = LogManager.getLogger(MSAccess.class.getName());
@@ -25,6 +24,7 @@ public class MSAccess {
     }
 
     public ResultSet excuteSQL(String sql) throws SQLException {
+        logger.info("MSAccess - {}", sql);
         return getStatement().executeQuery( sql );
     }
 }
