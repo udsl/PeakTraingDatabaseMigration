@@ -164,7 +164,7 @@ public class Lookups {
         dupCompanyMap.put(duplicateCoID, newID);
     }
 
-    private static final String GET_ID_COURSE_INS_SQL = "SELECT ORIG_ID FROM COURSE_INS WHERE ORIG_ID = ?";
+    private static final String GET_ID_COURSE_INS_SQL = "SELECT ID FROM COURSE_INS WHERE ORIG_ID = ?";
     private PreparedStatement getIdCourseInsStatment = null ;
 
     public int getCourseInsId(int oldId) throws SQLException {
@@ -174,11 +174,13 @@ public class Lookups {
         }
         int courseInsId = -1;
         getIdCourseInsStatment.setInt(1, oldId);
-        try(ResultSet rs = getOldCourseIdListStatment.executeQuery()) {
+        try(ResultSet rs = getIdCourseInsStatment.executeQuery()) {
             if (rs.next()) {
                 courseInsId = rs.getInt(1);
             }
-            logger.debug("courseIns not found for id {}", oldId);
+            else {
+                logger.debug("courseIns not found for id {}", oldId);
+            }
         }
 
         logger.debug("Returning courseInsId {}", courseInsId);

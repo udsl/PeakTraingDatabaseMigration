@@ -84,6 +84,7 @@ public class PeakTraingDataMigration {
                 }
                 else {
                     Attendants attendee = new Attendants(rs);
+                    logger.debug("Created attendee {}", attendee);
                     int attendeeId = DbConnection.saveAttendee(attendee, lookups);
                     attendee.setId(attendeeId);
                     lookups.addAttendee(attendee);
