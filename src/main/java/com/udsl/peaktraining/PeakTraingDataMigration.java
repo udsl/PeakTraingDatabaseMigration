@@ -18,42 +18,62 @@ public class PeakTraingDataMigration {
 
     Lookups lookups ;
     MSAccess mAccess ;
+    DbConnection dbConnection;
 
-    public static void main(String[] args) throws SQLException {
+    public static void main(String[] args)  {
         logger.info("Peak Training data migration starting . . .");
-        PeakTraingDataMigration app = new PeakTraingDataMigration();
         try {
-            app.createCompanys();
-            app.createTrainees();
-            app.createInstructorTrainers(); // Old system trainers and examiners where same list of people
-            app.createCourseDef();
-            app.createCourseInst();
-            app.updateCourseDef();
-            app.createNoneCertificate();
-            app.processAttendants();
+            PeakTraingDataMigration app = new PeakTraingDataMigration();
+            app.run();
         } catch (Exception e) {
             logger.error("Caught exception {}", e.getMessage(), e);
-        } finally {
-            app.closeConection();
         }
-        logger.info("END!");
+    }
+
+    void run() throws SQLException{
+        try {
+            dbConnection.startTrans();
+            createCompanys();
+            createTrainees();
+            createInstructorsExaminers(); // Old system trainers and examiners where same list of people
+            createCourseDef();
+            createCourseInst();
+            updateCourseDef();
+            dbConnection.createCertificateTypes();
+            createCertificateDefs();
+
+            processAttendants();
+            wrapup();
+            dbConnection.doCommit();
+            logger.info("END!");
+        }
+        finally {
+            closeConection();
+        }
     }
 
     PeakTraingDataMigration() throws SQLException {
         lookups = new Lookups();
         mAccess = new MSAccess();
+        dbConnection = new DbConnection();
+    }
+
+    void wrapup() throws SQLException {
+        dbConnection.executeSQL("insert into configuration values('Smalley Mill Farm', 'Smalley Mill Road', 'Horsley', 'Derbyshire', 'DE21 5BL', '911 519 739', '07768 978451', 20, 3)");
+        dbConnection.executeSQL("insert into invoicing_data values( 2316, '10837894', '16-25-21', 'Peak Training' )");
+    }
+
+    void createCertificateDefs() throws SQLException {
+        List<String> nameList = dbConnection.getCourseDefName();
+        for (String str: nameList) {
+            int key = dbConnection.createCertificateDefs(1, str, str);
+            dbConnection.updateCourseDefCert( str, key);
+        }
     }
 
     void closeConection() throws SQLException {
-        DbConnection.closeConection();
+        dbConnection.closeConection();
         lookups.closeConection();
-    }
-    /**
-     * Create certificate zero. Used to idnicate the certificate was not transfered from the original system (because there was no record of it!).
-     */
-    private void createNoneCertificate() throws SQLException {
-        DbConnection.createCertificateType();
-        DbConnection.createCertificateDef();
     }
 
     private static final String COUNT_QUERY_SQL = "select count(*) from [?]";
@@ -71,40 +91,40 @@ public class PeakTraingDataMigration {
         try (ResultSet rs = mAccess.excuteSQL(sql)) {
             while (rs.next()) {
                 if (rs.getInt("DelegateID")==0){
-                    errorsLogger.debug("Attendants record fond with DelegateID = 0, skipping - {}", DbConnection.resultsetFieldsAndValuesToString(rs));
+                    errorsLogger.debug("Attendants record fond with DelegateID = 0, skipping - {}", dbConnection.resultsetFieldsAndValuesToString(rs));
                 }
                 else if (lookups.getCourseInsId(rs.getInt("CourseID")) < 0){
-                    errorsLogger.debug("Attendants record found with invalid CourseID, skipping - {}", DbConnection.resultsetFieldsAndValuesToString(rs));
+                    errorsLogger.debug("Attendants record found with invalid CourseID, skipping - {}", dbConnection.resultsetFieldsAndValuesToString(rs));
                 }
                 else if (rs.getString("Passed") == null){
-                    errorsLogger.debug("Attendants record found with no result data, skipping - {}", DbConnection.resultsetFieldsAndValuesToString(rs));
+                    errorsLogger.debug("Attendants record found with no result data, skipping - {}", dbConnection.resultsetFieldsAndValuesToString(rs));
                 }
                 else if (lookups.getNewTrianeeId(rs.getInt("DelegateID")) < 0){
-                    errorsLogger.debug("Attendants record found with invalid DelegateID, skipping - {}", DbConnection.resultsetFieldsAndValuesToString(rs));
+                    errorsLogger.debug("Attendants record found with invalid DelegateID, skipping - {}", dbConnection.resultsetFieldsAndValuesToString(rs));
                 }
                 else {
                     Attendants attendee = new Attendants(rs);
                     logger.debug("Created attendee {}", attendee);
-                    int attendeeId = DbConnection.saveAttendee(attendee, lookups);
+                    int attendeeId = dbConnection.saveAttendee(attendee, lookups);
                     attendee.setId(attendeeId);
                     lookups.addAttendee(attendee);
-                    DbConnection.saveResults(attendee, lookups);
+                    dbConnection.saveResults(attendee, lookups);
                 }
             }
         }
     }
 
-    private void createInstructorTrainers() throws SQLException {
-        logger.debug("Processing {} Trainers records", getRecordCount("Trainers"));
+    private void createInstructorsExaminers() throws SQLException {
+        logger.debug("Processing {} Instructor records", getRecordCount("Trainers"));
         String sql = "SELECT [TrainerID], [Firstname], [Surname], [RegNumber] FROM [Trainers]";
         try (ResultSet rs = mAccess.excuteSQL(sql)) {
             while (rs.next()) {
                 InstructorExaminer trainer = new InstructorExaminer(rs);
-                int trainerId = DbConnection.saveTrainer(trainer, lookups);
+                int trainerId = dbConnection.saveTrainer(trainer, lookups);
                 trainer.setId(trainerId);
                 lookups.addInstructor(trainer.getOldId(), trainer);
                 InstructorExaminer examiner = new InstructorExaminer(rs);
-                int examinerId = DbConnection.saveExaminer(examiner, lookups);
+                int examinerId = dbConnection.saveExaminer(examiner, lookups);
                 examiner.setId(examinerId);
                 lookups.addExaminer(examiner.getOldId(), examiner);
             }
@@ -117,7 +137,7 @@ public class PeakTraingDataMigration {
         try (ResultSet rs = mAccess.excuteSQL(sql)) {
             while (rs.next()) {
                 CourseIns courseIns = new CourseIns(rs);
-                int courseId = DbConnection.saveCourseIns(courseIns, lookups);
+                int courseId = dbConnection.saveCourseIns(courseIns, lookups);
                 courseIns.setId(courseId);
                 lookups.addCourseIns(courseIns);
             }
@@ -128,7 +148,7 @@ public class PeakTraingDataMigration {
     private void updateCourseDef() throws SQLException {
         logger.debug("Updating course definitions with next instance number");
         List<Integer> courseIds = lookups.getCourseDefIds();
-        DbConnection.updateCourseDef(courseIds);
+        dbConnection.updateCourseDef(courseIds);
     }
 
     private void createCourseDef() throws SQLException {
@@ -137,7 +157,7 @@ public class PeakTraingDataMigration {
         try (ResultSet rs = mAccess.excuteSQL(sql)) {
             while (rs.next()) {
                 Course course = new Course(rs);
-                int courseId = DbConnection.saveCourse(course);
+                int courseId = dbConnection.saveCourse(course);
                 course.setId(courseId);
                 lookups.addCourse(course);
             }
@@ -167,13 +187,13 @@ public class PeakTraingDataMigration {
                     }
                 }
                 Company company = new Company(rs);
-                int id = DbConnection.saveCompany(company);
+                int id = dbConnection.saveCompany(company);
                 company.setId(id);
                 lookups.addCo(company);
                 logger.info("Company created - {}", company.toString());
                 try {
                     Contact contact = new Contact(id, rs);
-                    int contactId = DbConnection.saveContact(contact);
+                    int contactId = dbConnection.saveContact(contact);
                     logger.info("Contact created - {}", contact.toString());
                 } catch (DataException e) {
                     logger.error("Contact not created!");
@@ -192,7 +212,7 @@ public class PeakTraingDataMigration {
         try (ResultSet rs = mAccess.excuteSQL(sql)) {
             while (rs.next()) {
                 Trainee trainee = new Trainee(rs);
-                int traineeId = DbConnection.saveTrainee(trainee, lookups);
+                int traineeId = dbConnection.saveTrainee(trainee, lookups);
                 trainee.setId(traineeId);
                 logger.info("Trainee created - {}", trainee.toString());
                 lookups.addTrainee(trainee);

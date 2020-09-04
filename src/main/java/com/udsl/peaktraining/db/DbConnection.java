@@ -5,57 +5,64 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
+
+import static java.lang.Math.max;
 
 public class DbConnection {
     private static final Logger logger = LogManager.getLogger(DbConnection.class.getName());
 
-    private static Connection instance = null;
+    private Connection conn = null;
 
-    private static Connection getInstance() throws SQLException {
-        if (instance == null) {
-          // Home
-          instance = DriverManager.getConnection("jdbc:postgresql://smilodon:5432/postgres", "iangodman", "password");
-          // Peak Training
-          // instance = DriverManager.getConnection("jdbc:postgresql://192.168.1.127:5432/postgres", "postgres", "password");
-        }
-        return instance;
-    }
-
-    public static void closeConection() throws SQLException {
-        if (instance != null) {
-            instance.close();
-            instance = null;
+    public DbConnection() {
+        try {
+            // Home
+            conn = DriverManager.getConnection("jdbc:postgresql://smilodon:5432/postgres", "iangodman", "password");
+            // Peak Training
+            //conn = DriverManager.getConnection("jdbc:postgresql://192.168.1.127:5432/postgres", "postgres", "password");
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            System.exit(99);
         }
     }
 
-    public static void startTrans() throws SQLException {
-        getInstance().setAutoCommit(false);
+    public void closeConection() throws SQLException {
+        if (conn != null) {
+            conn.close();
+            conn = null;
+        }
     }
 
-    public static void doCommit() throws SQLException {
-        getInstance().commit();
+    public void startTrans() throws SQLException {
+        conn.setAutoCommit(false);
     }
 
-    public static void doRollback() throws SQLException {
-        getInstance().rollback();
+    public void doCommit() throws SQLException {
+        conn.commit();
+    }
+
+    public void doRollback() throws SQLException {
+        conn.rollback();
     }
 
     private static final String SAVE_COMPANY_SQL = "INSERT INTO company (company_name, addr1, addr2, addr3, addr4, postcode) VALUES (?, ?, ?, ?, ?, ?)";
 
-    public static int saveCompany(Company company) throws SQLException {
+    private PreparedStatement saveCompanyStmt = null;
+    public int saveCompany(Company company) throws SQLException {
         int generatedkey = 0;
-        Connection conn = getInstance();
-        PreparedStatement stmt = conn.prepareStatement(SAVE_COMPANY_SQL, Statement.RETURN_GENERATED_KEYS);
-        stmt.setString(1, company.getName());
-        stmt.setString(2, company.getAddress1());
-        stmt.setString(3, company.getAddress2());
-        stmt.setString(4, company.getAddress3());
-        stmt.setString(5, company.getAddress4());
-        stmt.setString(6, company.getPostcode());
-        int inserted = stmt.executeUpdate();
+        if (saveCompanyStmt == null) {
+            saveCompanyStmt = conn.prepareStatement(SAVE_COMPANY_SQL, Statement.RETURN_GENERATED_KEYS);
+        }
+        saveCompanyStmt.setString(1, company.getName());
+        saveCompanyStmt.setString(2, company.getAddress1());
+        saveCompanyStmt.setString(3, company.getAddress2());
+        saveCompanyStmt.setString(4, company.getAddress3());
+        saveCompanyStmt.setString(5, company.getAddress4());
+        saveCompanyStmt.setString(6, company.getPostcode());
+        int inserted = saveCompanyStmt.executeUpdate();
         if (inserted == 1) {
-            ResultSet rs = stmt.getGeneratedKeys();
+            ResultSet rs = saveCompanyStmt.getGeneratedKeys();
             if (rs.next()) {
                 generatedkey = rs.getInt(1);
                 logger.info("Auto Generated Company Primary Key {}", generatedkey);
@@ -66,19 +73,21 @@ public class DbConnection {
 
     private static final String SAVE_CONTACT_SQL = "INSERT INTO contact (company_id, name, email, phone, mobile) VALUES (?, ?, ?, ?, ?)";
 
-    public static int saveContact(Contact contact) throws SQLException {
+    PreparedStatement saveContactStmt = null ;
+    public int saveContact(Contact contact) throws SQLException {
         int generatedkey = 0;
-        Connection conn = getInstance();
-        PreparedStatement stmt = conn.prepareStatement(SAVE_CONTACT_SQL, Statement.RETURN_GENERATED_KEYS);
-        stmt.setInt(1, contact.getCompanyId());
-        stmt.setString(2, contact.getName());
-        stmt.setString(3, contact.getEmail());
-        stmt.setString(4, contact.getPhone());
-        stmt.setString(5, contact.getMobile());
+        if (saveContactStmt == null) {
+            saveContactStmt = conn.prepareStatement(SAVE_CONTACT_SQL, Statement.RETURN_GENERATED_KEYS);
+        }
+        saveContactStmt.setInt(1, contact.getCompanyId());
+        saveContactStmt.setString(2, contact.getName());
+        saveContactStmt.setString(3, contact.getEmail());
+        saveContactStmt.setString(4, contact.getPhone());
+        saveContactStmt.setString(5, contact.getMobile());
 
-        int inserted = stmt.executeUpdate();
+        int inserted = saveContactStmt.executeUpdate();
         if (inserted == 1) {
-            ResultSet rs = stmt.getGeneratedKeys();
+            ResultSet rs = saveContactStmt.getGeneratedKeys();
             if (rs.next()) {
                 generatedkey = rs.getInt(1);
                 logger.info("Auto Generated Contact Primary Key {}", generatedkey);
@@ -88,18 +97,20 @@ public class DbConnection {
     }
 
     private static final String SAVE_TRAINEE_SQL = "INSERT INTO trainee (company_id, forename, surname) VALUES (?, ?, ?)";
-
-    public static int saveTrainee(Trainee trainee, Lookups lookups) throws SQLException {
+    PreparedStatement saveTraineeStmt = null ;
+    public int saveTrainee(Trainee trainee, Lookups lookups) throws SQLException {
         int generatedkey = 0;
-        Connection conn = getInstance();
-        PreparedStatement stmt = conn.prepareStatement(SAVE_TRAINEE_SQL, Statement.RETURN_GENERATED_KEYS);
-        stmt.setInt(1, lookups.getNewCompanyId(trainee.getCompanyId()));
-        stmt.setString(2, trainee.getForename());
-        stmt.setString(3, trainee.getSurname());
+        if (saveTraineeStmt == null) {
+            saveTraineeStmt = conn.prepareStatement(SAVE_TRAINEE_SQL, Statement.RETURN_GENERATED_KEYS);
+        }
 
-        int inserted = stmt.executeUpdate();
+        saveTraineeStmt.setInt(1, lookups.getNewCompanyId(trainee.getCompanyId()));
+        saveTraineeStmt.setString(2, trainee.getForename());
+        saveTraineeStmt.setString(3, trainee.getSurname());
+
+        int inserted = saveTraineeStmt.executeUpdate();
         if (inserted == 1) {
-            ResultSet rs = stmt.getGeneratedKeys();
+            ResultSet rs = saveTraineeStmt.getGeneratedKeys();
             if (rs.next()) {
                 generatedkey = rs.getInt(1);
                 logger.info("Auto Generated Trainee Primary Key {}", generatedkey);
@@ -109,18 +120,20 @@ public class DbConnection {
     }
 
     private static final String SAVE_COURSE_SQL = "INSERT INTO course_def (name, description, course_number, def_days, default_cert_id) VALUES (?, ?, ?, 1, 0)";
+    PreparedStatement saveCourseStmt = null ;
 
-    public static int saveCourse(Course course) throws SQLException {
+    public int saveCourse(Course course) throws SQLException {
         int generatedkey = 0;
-        Connection conn = getInstance();
-        PreparedStatement stmt = conn.prepareStatement(SAVE_COURSE_SQL, Statement.RETURN_GENERATED_KEYS);
-        stmt.setString(1, course.getCoursetitle());
-        stmt.setString(2, course.getCoursetitle());
-        stmt.setString(3, course.getNextCourseRef());
+        if (saveCourseStmt == null) {
+            saveCourseStmt = conn.prepareStatement(SAVE_COURSE_SQL, Statement.RETURN_GENERATED_KEYS);
+        }
+        saveCourseStmt.setString(1, course.getCoursetitle());
+        saveCourseStmt.setString(2, course.getCoursetitle());
+        saveCourseStmt.setString(3, course.getNextCourseRef());
 
-        int inserted = stmt.executeUpdate();
+        int inserted = saveCourseStmt.executeUpdate();
         if (inserted == 1) {
-            ResultSet rs = stmt.getGeneratedKeys();
+            ResultSet rs = saveCourseStmt.getGeneratedKeys();
             if (rs.next()) {
                 generatedkey = rs.getInt(1);
                 logger.info("Auto Generated Course Primary Key {}", generatedkey);
@@ -130,26 +143,26 @@ public class DbConnection {
     }
 
     private static final String SAVE_COURSE_INS_SQL = "INSERT INTO course_ins (course_def_id, instance_number, description, start_date, days, held_at, instructor_id, examiner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-
-    public static int saveCourseIns(CourseIns courseIns, Lookups lookups) throws SQLException {
+    PreparedStatement saveCourseInsStmt = null ;
+    public int saveCourseIns(CourseIns courseIns, Lookups lookups) throws SQLException {
         logger.info("Saving courseIns: {}", courseIns);
         int generatedkey = 0;
-        Connection conn = getInstance();
-        PreparedStatement stmt = conn.prepareStatement(SAVE_COURSE_INS_SQL, Statement.RETURN_GENERATED_KEYS);
-
-        stmt.setInt(1, lookups.getCourseDefId(courseIns.getCourseTemplateId()));
-        stmt.setInt(2, courseIns.getAndSetInstanceNumber());
-        stmt.setString(3, courseIns.getDescription());
-        stmt.setDate(4, Date.valueOf(courseIns.getStartDate()));
-        stmt.setInt(5, courseIns.getDays());
-        stmt.setString(6, courseIns.getHeldAt());
+        if (saveCourseInsStmt == null) {
+            saveCourseInsStmt = conn.prepareStatement(SAVE_COURSE_INS_SQL, Statement.RETURN_GENERATED_KEYS);
+        }
+        saveCourseInsStmt.setInt(1, lookups.getCourseDefId(courseIns.getCourseTemplateId()));
+        saveCourseInsStmt.setInt(2, courseIns.getAndSetInstanceNumber());
+        saveCourseInsStmt.setString(3, courseIns.getDescription());
+        saveCourseInsStmt.setDate(4, Date.valueOf(courseIns.getStartDate()));
+        saveCourseInsStmt.setInt(5, courseIns.getDays());
+        saveCourseInsStmt.setString(6, courseIns.getHeldAt());
         // Old system only has examiner so set Instructor and Examiner to same value.
-        stmt.setInt(7, lookups.getInstructor(courseIns.getExaminer()));
-        stmt.setInt(8, lookups.getExaminer(courseIns.getExaminer()));
+        saveCourseInsStmt.setInt(7, lookups.getInstructor(courseIns.getExaminer()));
+        saveCourseInsStmt.setInt(8, lookups.getExaminer(courseIns.getExaminer()));
 
-        int inserted = stmt.executeUpdate();
+        int inserted = saveCourseInsStmt.executeUpdate();
         if (inserted == 1) {
-            ResultSet rs = stmt.getGeneratedKeys();
+            ResultSet rs = saveCourseInsStmt.getGeneratedKeys();
             if (rs.next()) {
                 generatedkey = rs.getInt(1);
                 logger.info("Auto Generated Course Primary Key {}", generatedkey);
@@ -159,17 +172,18 @@ public class DbConnection {
     }
 
     private static final String SAVE_INSTRUCTOR_SQL = "INSERT INTO instructor (name, reg_num) VALUES (?, ?)";
-
-    public static int saveTrainer(InstructorExaminer instructor, Lookups lookups) throws SQLException {
+    PreparedStatement saveInstructorStmt = null ;
+    public int saveTrainer(InstructorExaminer instructor, Lookups lookups) throws SQLException {
         int generatedkey = 0;
-        Connection conn = getInstance();
-        PreparedStatement stmt = conn.prepareStatement(SAVE_INSTRUCTOR_SQL, Statement.RETURN_GENERATED_KEYS);
-        stmt.setString(1, instructor.getForename() + " " + instructor.getSurname());
-        stmt.setString(2, instructor.getRegNumber());
+        if (saveInstructorStmt == null) {
+            saveInstructorStmt = conn.prepareStatement(SAVE_INSTRUCTOR_SQL, Statement.RETURN_GENERATED_KEYS);
+        }
+        saveInstructorStmt.setString(1, instructor.getForename() + " " + instructor.getSurname());
+        saveInstructorStmt.setString(2, instructor.getRegNumber());
 
-        int inserted = stmt.executeUpdate();
+        int inserted = saveInstructorStmt.executeUpdate();
         if (inserted == 1) {
-            ResultSet rs = stmt.getGeneratedKeys();
+            ResultSet rs = saveInstructorStmt.getGeneratedKeys();
             if (rs.next()) {
                 generatedkey = rs.getInt(1);
                 logger.info("Auto Generated Instructor Primary Key {}", generatedkey);
@@ -179,17 +193,18 @@ public class DbConnection {
     }
 
     private static final String SAVE_EXAMINER_SQL = "INSERT INTO examiner (name, reg_num) VALUES (?, ?)";
-
-    public static int saveExaminer(InstructorExaminer examiner, Lookups lookups) throws SQLException {
+    PreparedStatement saveExaminerStmt = null ;
+    public int saveExaminer(InstructorExaminer examiner, Lookups lookups) throws SQLException {
         int generatedkey = 0;
-        Connection conn = getInstance();
-        PreparedStatement stmt = conn.prepareStatement(SAVE_EXAMINER_SQL, Statement.RETURN_GENERATED_KEYS);
-        stmt.setString(1, examiner.getForename() + " " + examiner.getSurname());
-        stmt.setString(2, examiner.getRegNumber());
+        if (saveExaminerStmt == null) {
+            saveExaminerStmt = conn.prepareStatement(SAVE_EXAMINER_SQL, Statement.RETURN_GENERATED_KEYS);
+        }
+        saveExaminerStmt.setString(1, examiner.getForename() + " " + examiner.getSurname());
+        saveExaminerStmt.setString(2, examiner.getRegNumber());
 
-        int inserted = stmt.executeUpdate();
+        int inserted = saveExaminerStmt.executeUpdate();
         if (inserted == 1) {
-            ResultSet rs = stmt.getGeneratedKeys();
+            ResultSet rs = saveExaminerStmt.getGeneratedKeys();
             if (rs.next()) {
                 generatedkey = rs.getInt(1);
                 logger.info("Auto Generated Examiner Primary Key {}", generatedkey);
@@ -199,18 +214,19 @@ public class DbConnection {
     }
 
     private static final String SAVE_ATTENDEE_SQL = "INSERT INTO attendees (trainee_id, course_ins_id) VALUES (?, ?)";
-
+    PreparedStatement saveAttendeeStmt = null ;
     // Attendants records become Attendee and results records
-    public static int saveAttendee(Attendants attendee, Lookups lookups) throws SQLException {
+    public int saveAttendee(Attendants attendee, Lookups lookups) throws SQLException {
         int generatedkey = 0;
-        Connection conn = getInstance();
-        PreparedStatement stmt = conn.prepareStatement(SAVE_ATTENDEE_SQL, Statement.RETURN_GENERATED_KEYS);
-        stmt.setInt(1, lookups.getNewTrianeeId(attendee.getDelegateID()));
-        stmt.setInt(2, lookups.getCourseInsId(attendee.getCourseID()));
+        if (saveAttendeeStmt == null) {
+            saveAttendeeStmt = conn.prepareStatement(SAVE_ATTENDEE_SQL, Statement.RETURN_GENERATED_KEYS);
+        }
+        saveAttendeeStmt.setInt(1, lookups.getNewTrianeeId(attendee.getDelegateID()));
+        saveAttendeeStmt.setInt(2, lookups.getCourseInsId(attendee.getCourseID()));
 
-        int inserted = stmt.executeUpdate();
+        int inserted = saveAttendeeStmt.executeUpdate();
         if (inserted == 1) {
-            ResultSet rs = stmt.getGeneratedKeys();
+            ResultSet rs = saveAttendeeStmt.getGeneratedKeys();
             if (rs.next()) {
                 generatedkey = rs.getInt(1);
                 logger.info("Auto Generated Attendee Primary Key {}", generatedkey);
@@ -220,25 +236,26 @@ public class DbConnection {
     }
 
     private static final String SAVE_COURSE_RESULTS_SQL = "INSERT INTO course_results (attendee_id, pass, theory, faults, notes, issued_id) VALUES (?, ?, ?, ?, ?, 0)";
-
-    public static void saveResults(Attendants attendee, Lookups lookups) throws SQLException {
-        Connection conn = getInstance();
-        PreparedStatement stmt = conn.prepareStatement(SAVE_COURSE_RESULTS_SQL);
-        stmt.setInt(1, attendee.getId());
-        stmt.setBoolean(2, attendee.isPassed());
+    PreparedStatement saveCourseResultsStmt = null ;
+    public void saveResults(Attendants attendee, Lookups lookups) throws SQLException {
+        if (saveCourseResultsStmt == null) {
+            saveCourseResultsStmt = conn.prepareStatement(SAVE_COURSE_RESULTS_SQL);
+        }
+        saveCourseResultsStmt.setInt(1, attendee.getId());
+        saveCourseResultsStmt.setBoolean(2, attendee.isPassed());
 
         if (attendee.getTheory() == null) {
-            stmt.setInt(3, 0);
+            saveCourseResultsStmt.setInt(3, 0);
         }
         else {
-            stmt.setInt(3, attendee.getTheory());
+            saveCourseResultsStmt.setInt(3, attendee.getTheory());
         }
 
         if (attendee.getPracticalFaults() == null) {
-            stmt.setNull(4, java.sql.Types.INTEGER);
+            saveCourseResultsStmt.setNull(4, java.sql.Types.INTEGER);
         }
         else {
-            stmt.setInt(4, attendee.getPracticalFaults());
+            saveCourseResultsStmt.setInt(4, attendee.getPracticalFaults());
         }
 
         StringBuilder str = new StringBuilder();
@@ -253,43 +270,109 @@ public class DbConnection {
             str.append("Further training: ");
             str.append(furtherTraining);
         }
-        stmt.setString(5, str.toString());
-        stmt.executeUpdate();
+        saveCourseResultsStmt.setString(5, str.toString());
+        saveCourseResultsStmt.executeUpdate();
     }
 
-    private static final String SAVE_CERTIFICATE_TYPE_SQL = "INSERT INTO certificate_type (certificate_type_id, prefix, next_num) VALUES (0, 'N/A', 0)";
+    private static final String SAVE_CERTIFICATE_TYPE_SQL = "INSERT INTO certificate_type (certificate_type_name, prefix) VALUES ('%s', '%s')";
 
-    public static void createCertificateType() throws SQLException {
-        Connection conn = getInstance();
-        PreparedStatement stmt = conn.prepareStatement(SAVE_CERTIFICATE_TYPE_SQL);
-        stmt.executeUpdate();
+    public void createCertificateTypes() throws SQLException {
+        executeSQL(String.format(SAVE_CERTIFICATE_TYPE_SQL, "BASIC-IH", "PT.IH"));
+        executeSQL(String.format(SAVE_CERTIFICATE_TYPE_SQL, "BASIC-VP", "PT.VP"));
+        executeSQL(String.format(SAVE_CERTIFICATE_TYPE_SQL, "BASIC-SA", "PT.SA"));
     }
 
-    private static final String SAVE_CERTIFICATE_DEF_SQL = "INSERT INTO certificate_def (certificate_def_id, certificate_type_id, certificate_name, certificate_title, certificate_template) VALUES (0, 0, 'NOT IMPORTED', 'N/A', 'NOT TO BE USED')";
+    private static final String SAVE_CERTIFICATE_DEF_SQL = "INSERT INTO certificate_def (certificate_type_id, certificate_name, certificate_title) VALUES ( ?, ?, ?)";
+    PreparedStatement saveCertificateDefStmt = null ;
 
-    public static void createCertificateDef() throws SQLException {
-        Connection conn = getInstance();
-        PreparedStatement stmt = conn.prepareStatement(SAVE_CERTIFICATE_DEF_SQL);
-        stmt.executeUpdate();
-    }
-
-    private static final String GET_COURSE_INS_COUT_SQL = "SELECT count(*) from course_ins WHERE course_def_id = ?";
-    private static final String UPDATE_COURSE_DEF_SQL = "UPDATE course_def SET next_instance = ? WHERE course_def_id = ?";
-
-    public static void updateCourseDef(List<Integer> courseDefIdList) throws SQLException {
-        Connection conn = getInstance();
-        PreparedStatement stmt = conn.prepareStatement(GET_COURSE_INS_COUT_SQL);
-        PreparedStatement stmtUpdate = conn.prepareStatement(UPDATE_COURSE_DEF_SQL);
-        for(Integer id : courseDefIdList) {
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-            rs.next();
-            int count = rs.getInt(1);
-            logger.info("Found {} records for course def {}", count, id);
-            stmtUpdate.setInt(1, count);
-            stmtUpdate.setInt(2, id);
-            stmtUpdate.executeUpdate();
+    public int createCertificateDefs(int typeId, String certName, String certTitle) throws SQLException {
+        int generatedkey = 0;
+        if (saveCertificateDefStmt == null) {
+            saveCertificateDefStmt = conn.prepareStatement(SAVE_CERTIFICATE_DEF_SQL, Statement.RETURN_GENERATED_KEYS);
         }
+        saveCertificateDefStmt.setInt(1, typeId);
+        saveCertificateDefStmt.setString(2, certName);
+        saveCertificateDefStmt.setString(3, certTitle);
+        int inserted = saveCertificateDefStmt.executeUpdate();
+        if (inserted == 1) {
+            ResultSet rs = saveCertificateDefStmt.getGeneratedKeys();
+            if (rs.next()) {
+                generatedkey = rs.getInt(1);
+                logger.info("Auto Generated Company Primary Key {}", generatedkey);
+            }
+        }
+        return generatedkey;
+    }
+
+    private static final String GET_COURSE_INS_COUNT_SQL = "SELECT count(*) from course_ins WHERE course_def_id = ?";
+    private static final String GET_COURSE_DAYS_SQL = "SELECT days, count(days) as days_count from course_ins WHERE course_def_id = ? and days != 0 group by days order by days_count desc;";
+    private static final String UPDATE_COURSE_DEF_SQL = "UPDATE course_def SET next_instance = ?, def_days = ? WHERE course_def_id = ?";
+    PreparedStatement getCourseInsCountStmt = null ;
+    PreparedStatement getCourseDaysStmt = null ;
+    PreparedStatement updateCourseDefStmt = null ;
+
+    public void updateCourseDef(List<Integer> courseDefIdList) throws SQLException {
+        if (getCourseInsCountStmt == null) {
+            getCourseInsCountStmt = conn.prepareStatement(GET_COURSE_INS_COUNT_SQL);
+        }
+        if (getCourseDaysStmt == null) {
+            getCourseDaysStmt = conn.prepareStatement(GET_COURSE_DAYS_SQL);
+        }
+        if (saveCourseResultsStmt == null) {
+            updateCourseDefStmt = conn.prepareStatement(UPDATE_COURSE_DEF_SQL);
+        }
+        for(Integer id : courseDefIdList) {
+            getCourseInsCountStmt.setInt(1, id);
+            try (ResultSet rsCount = getCourseInsCountStmt.executeQuery()) {
+                rsCount.next(); // Count query always returns a result
+                int count = rsCount.getInt(1);
+                int days = 1; // default value
+                getCourseDaysStmt.setInt(1, id);
+                try (ResultSet rsDays = getCourseDaysStmt.executeQuery()) {
+                    if (rsDays.next()){ // query may not return a result!
+                        days = rsDays.getInt(1);
+                    }
+                    logger.info("Found {} records for course def {}", count, id);
+                    updateCourseDefStmt.setInt(1, count + 1);
+                    updateCourseDefStmt.setInt(2, days);
+                    updateCourseDefStmt.setInt(3, id);
+                    updateCourseDefStmt.executeUpdate();
+                }
+            }
+        }
+    }
+
+    private static final String UPDATE_COURSE_DEF_CERT_SQL = "UPDATE course_def SET default_cert_id = ? WHERE name = ?";
+    PreparedStatement updateCourseDefCertStmt = null ;
+
+    public void updateCourseDefCert( String name, int key) throws SQLException {
+        logger.info("name '{}', key {}", name, key);
+        if (updateCourseDefCertStmt == null) {
+            updateCourseDefCertStmt = conn.prepareStatement(UPDATE_COURSE_DEF_CERT_SQL);
+        }
+        updateCourseDefCertStmt.setInt(1, key);
+        updateCourseDefCertStmt.setString(2, name);
+        updateCourseDefCertStmt.executeUpdate();
+    }
+
+    private static final String GET_COURSE_DEF_NAMES_SQL = "SELECT name from course_def";
+    PreparedStatement getCourseDefNamesStmt = null ;
+
+    public List<String> getCourseDefName() throws SQLException {
+        if (getCourseDefNamesStmt == null) {
+            getCourseDefNamesStmt = conn.prepareStatement(GET_COURSE_DEF_NAMES_SQL);
+        }
+        List<String> nameList = new ArrayList<>();
+        ResultSet rs = getCourseDefNamesStmt.executeQuery();
+        while(rs.next()){
+            nameList.add(rs.getString(1));
+        }
+        return nameList;
+    }
+
+    public void executeSQL( String sql)throws SQLException{
+        Statement stmt = conn.createStatement();
+        stmt.execute(sql);
     }
 
     /**
@@ -298,7 +381,7 @@ public class DbConnection {
      * @return string representation of field names
      * @throws SQLException
      */
-    public static String resultsetFieldsAndValuesToString(ResultSet rs) throws SQLException {
+    public String resultsetFieldsAndValuesToString(ResultSet rs) throws SQLException {
         ResultSetMetaData rsmd = rs.getMetaData();
         int columnsNumber = rsmd.getColumnCount();
         StringBuilder str = new StringBuilder();
@@ -317,7 +400,7 @@ public class DbConnection {
      * @param rs the result set you wnat to log the filed names of.
      * @throws SQLException
      */
-    public static void logResultset(ResultSet rs) throws SQLException {
+    public void logResultset(ResultSet rs) throws SQLException {
         if (logger.isDebugEnabled()) {
             logger.debug("Result set = '{}'", resultsetFieldsAndValuesToString(rs));
         }
