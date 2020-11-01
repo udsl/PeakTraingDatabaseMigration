@@ -168,7 +168,7 @@ public class Lookups {
     private PreparedStatement getIdCourseInsStatment = null ;
 
     public int getCourseInsId(int oldId) throws SQLException {
-        logger.debug("Looked up courseInsId {}", oldId);
+        logger.info("Looked up courseInsId {}", oldId);
         if (getIdCourseInsStatment == null){
             getIdCourseInsStatment = conn.prepareStatement(GET_ID_COURSE_INS_SQL);
         }
@@ -183,7 +183,7 @@ public class Lookups {
             }
         }
 
-        logger.debug("Returning courseInsId {}", courseInsId);
+        logger.info("Returning courseInsId {}", courseInsId);
         return courseInsId;
     }
 

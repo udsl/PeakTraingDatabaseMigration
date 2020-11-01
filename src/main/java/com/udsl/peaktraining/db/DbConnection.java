@@ -4,6 +4,8 @@ import com.udsl.peaktraining.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,13 +19,19 @@ public class DbConnection {
 
     public DbConnection() {
         try {
-            // Home
-            conn = DriverManager.getConnection("jdbc:postgresql://smilodon:5432/postgres", "iangodman", "password");
-            // Peak Training
-            //conn = DriverManager.getConnection("jdbc:postgresql://192.168.1.127:5432/postgres", "postgres", "password");
+            String hostname = InetAddress.getLocalHost().getHostName();
+            if ("XENOSMILUS".equals(hostname)) { // Home
+                conn = DriverManager.getConnection("jdbc:postgresql://smilodon:5432/postgres", "iangodman", "password");
+            }
+            else{ // Peak Training
+                conn = DriverManager.getConnection("jdbc:postgresql://192.168.1.127:5432/postgres", "postgres", "password");
+            }
         } catch (SQLException throwables) {
             throwables.printStackTrace();
             System.exit(99);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            System.exit(101);
         }
     }
 
@@ -235,27 +243,28 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static final String SAVE_COURSE_RESULTS_SQL = "INSERT INTO course_results (attendee_id, pass, theory, faults, notes, issued_id) VALUES (?, ?, ?, ?, ?, 0)";
+    private static final String SAVE_COURSE_RESULTS_SQL = "INSERT INTO course_results (attendee_id, course_ins, pass, theory, faults, notes, issued_id) VALUES (?, ?, ?, ?, ?, ?, 0)";
     PreparedStatement saveCourseResultsStmt = null ;
     public void saveResults(Attendants attendee, Lookups lookups) throws SQLException {
         if (saveCourseResultsStmt == null) {
             saveCourseResultsStmt = conn.prepareStatement(SAVE_COURSE_RESULTS_SQL);
         }
         saveCourseResultsStmt.setInt(1, attendee.getId());
-        saveCourseResultsStmt.setBoolean(2, attendee.isPassed());
+        saveCourseResultsStmt.setInt(2, lookups.getCourseInsId(attendee.getCourseID()));
+        saveCourseResultsStmt.setBoolean(3, attendee.isPassed());
 
         if (attendee.getTheory() == null) {
-            saveCourseResultsStmt.setInt(3, 0);
+            saveCourseResultsStmt.setInt(4, 0);
         }
         else {
-            saveCourseResultsStmt.setInt(3, attendee.getTheory());
+            saveCourseResultsStmt.setInt(4, attendee.getTheory());
         }
 
         if (attendee.getPracticalFaults() == null) {
-            saveCourseResultsStmt.setNull(4, java.sql.Types.INTEGER);
+            saveCourseResultsStmt.setNull(5, java.sql.Types.INTEGER);
         }
         else {
-            saveCourseResultsStmt.setInt(4, attendee.getPracticalFaults());
+            saveCourseResultsStmt.setInt(5, attendee.getPracticalFaults());
         }
 
         StringBuilder str = new StringBuilder();
@@ -270,39 +279,11 @@ public class DbConnection {
             str.append("Further training: ");
             str.append(furtherTraining);
         }
-        saveCourseResultsStmt.setString(5, str.toString());
+        saveCourseResultsStmt.setString(6, str.toString());
         saveCourseResultsStmt.executeUpdate();
     }
 
     private static final String SAVE_CERTIFICATE_TYPE_SQL = "INSERT INTO certificate_type (certificate_type_name, prefix) VALUES ('%s', '%s')";
-
-    public void createCertificateTypes() throws SQLException {
-        executeSQL(String.format(SAVE_CERTIFICATE_TYPE_SQL, "BASIC-IH", "PT.IH"));
-        executeSQL(String.format(SAVE_CERTIFICATE_TYPE_SQL, "BASIC-VP", "PT.VP"));
-        executeSQL(String.format(SAVE_CERTIFICATE_TYPE_SQL, "BASIC-SA", "PT.SA"));
-    }
-
-    private static final String SAVE_CERTIFICATE_DEF_SQL = "INSERT INTO certificate_def (certificate_type_id, certificate_name, certificate_title) VALUES ( ?, ?, ?)";
-    PreparedStatement saveCertificateDefStmt = null ;
-
-    public int createCertificateDefs(int typeId, String certName, String certTitle) throws SQLException {
-        int generatedkey = 0;
-        if (saveCertificateDefStmt == null) {
-            saveCertificateDefStmt = conn.prepareStatement(SAVE_CERTIFICATE_DEF_SQL, Statement.RETURN_GENERATED_KEYS);
-        }
-        saveCertificateDefStmt.setInt(1, typeId);
-        saveCertificateDefStmt.setString(2, certName);
-        saveCertificateDefStmt.setString(3, certTitle);
-        int inserted = saveCertificateDefStmt.executeUpdate();
-        if (inserted == 1) {
-            ResultSet rs = saveCertificateDefStmt.getGeneratedKeys();
-            if (rs.next()) {
-                generatedkey = rs.getInt(1);
-                logger.info("Auto Generated Company Primary Key {}", generatedkey);
-            }
-        }
-        return generatedkey;
-    }
 
     private static final String GET_COURSE_INS_COUNT_SQL = "SELECT count(*) from course_ins WHERE course_def_id = ?";
     private static final String GET_COURSE_DAYS_SQL = "SELECT days, count(days) as days_count from course_ins WHERE course_def_id = ? and days != 0 group by days order by days_count desc;";

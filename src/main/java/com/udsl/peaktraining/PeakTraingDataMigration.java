@@ -5,12 +5,16 @@ import com.udsl.peaktraining.db.DbConnection;
 import com.udsl.peaktraining.db.MSAccess;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.sql.*;
 import java.util.Arrays;
 import java.util.List;
 
-public class PeakTraingDataMigration {
+@SpringBootApplication
+public class PeakTraingDataMigration  implements CommandLineRunner {
     private static final Logger logger = LogManager.getLogger(PeakTraingDataMigration.class.getName());
     private static final Logger errorsLogger = LogManager.getLogger("errors-log");
 
@@ -20,7 +24,12 @@ public class PeakTraingDataMigration {
     MSAccess mAccess ;
     DbConnection dbConnection;
 
-    public static void main(String[] args)  {
+    public static void main(String[] args) {
+        SpringApplication.run(PeakTraingDataMigration.class, args);
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
         logger.info("Peak Training data migration starting . . .");
         try {
             PeakTraingDataMigration app = new PeakTraingDataMigration();
@@ -39,11 +48,7 @@ public class PeakTraingDataMigration {
             createCourseDef();
             createCourseInst();
             updateCourseDef();
-            dbConnection.createCertificateTypes();
-            createCertificateDefs();
-
             processAttendants();
-            wrapup();
             dbConnection.doCommit();
             logger.info("END!");
         }
@@ -56,19 +61,6 @@ public class PeakTraingDataMigration {
         lookups = new Lookups();
         mAccess = new MSAccess();
         dbConnection = new DbConnection();
-    }
-
-    void wrapup() throws SQLException {
-        dbConnection.executeSQL("insert into configuration values('Smalley Mill Farm', 'Smalley Mill Road', 'Horsley', 'Derbyshire', 'DE21 5BL', '911 519 739', '07768 978451', 20, 3)");
-        dbConnection.executeSQL("insert into invoicing_data values( 2316, '10837894', '16-25-21', 'Peak Training' )");
-    }
-
-    void createCertificateDefs() throws SQLException {
-        List<String> nameList = dbConnection.getCourseDefName();
-        for (String str: nameList) {
-            int key = dbConnection.createCertificateDefs(1, str, str);
-            dbConnection.updateCourseDefCert( str, key);
-        }
     }
 
     void closeConection() throws SQLException {
@@ -220,4 +212,19 @@ public class PeakTraingDataMigration {
         }
     }
 
+    String getSigFileName( String name){
+        if ("THOMAS HARDY".equals(name)){
+            return "thomas-hardy-sig.jpg";
+        }
+        else if ("DAVE HARDY".equals(name)){
+            return "dave-hardy-sig.jpg";
+        }
+        else if ("MICK HUMPHRY".equals(name)){
+            return "mick-sig.jpg";
+        }
+        else {
+            return "blank-sig.jpg";
+        }
+
+    }
 }
