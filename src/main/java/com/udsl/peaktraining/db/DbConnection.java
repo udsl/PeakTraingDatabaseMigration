@@ -127,7 +127,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static final String SAVE_COURSE_SQL = "INSERT INTO course_def (name, description, course_number, def_days, default_cert_id) VALUES (?, ?, ?, 1, 0)";
+    private static final String SAVE_COURSE_SQL = "INSERT INTO course_def (name, description, course_number, def_days, default_cert_id) VALUES (?, ?, ?, 1, 1)";
     PreparedStatement saveCourseStmt = null ;
 
     public int saveCourse(Course course) throws SQLException {
@@ -282,8 +282,6 @@ public class DbConnection {
         saveCourseResultsStmt.setString(6, str.toString());
         saveCourseResultsStmt.executeUpdate();
     }
-
-    private static final String SAVE_CERTIFICATE_TYPE_SQL = "INSERT INTO certificate_type (certificate_type_name, prefix) VALUES ('%s', '%s')";
 
     private static final String GET_COURSE_INS_COUNT_SQL = "SELECT count(*) from course_ins WHERE course_def_id = ?";
     private static final String GET_COURSE_DAYS_SQL = "SELECT days, count(days) as days_count from course_ins WHERE course_def_id = ? and days != 0 group by days order by days_count desc;";
