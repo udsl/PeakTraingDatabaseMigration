@@ -44,7 +44,7 @@ public class PeakTraingDataMigration  implements CommandLineRunner {
             dbConnection.startTrans();
             createCompanys();
             createTrainees();
-            createInstructorsExaminers(); // Old system trainers and examiners where same list of people
+//            createInstructorsExaminers(); // Old system trainers and examiners where same list of people
             createCourseDef();
             createCourseInst();
             updateCourseDef();
@@ -106,22 +106,22 @@ public class PeakTraingDataMigration  implements CommandLineRunner {
         }
     }
 
-    private void createInstructorsExaminers() throws SQLException {
-        logger.debug("Processing {} Instructor records", getRecordCount("Trainers"));
-        String sql = "SELECT [TrainerID], [Firstname], [Surname], [RegNumber] FROM [Trainers]";
-        try (ResultSet rs = mAccess.excuteSQL(sql)) {
-            while (rs.next()) {
-                InstructorExaminer trainer = new InstructorExaminer(rs);
-                int trainerId = dbConnection.saveTrainer(trainer, lookups);
-                trainer.setId(trainerId);
-                lookups.addInstructor(trainer.getOldId(), trainer);
-                InstructorExaminer examiner = new InstructorExaminer(rs);
-                int examinerId = dbConnection.saveExaminer(examiner, lookups);
-                examiner.setId(examinerId);
-                lookups.addExaminer(examiner.getOldId(), examiner);
-            }
-        }
-    }
+//    private void createInstructorsExaminers() throws SQLException {
+//        logger.debug("Processing {} Instructor records", getRecordCount("Trainers"));
+//        String sql = "SELECT [TrainerID], [Firstname], [Surname], [RegNumber] FROM [Trainers]";
+//        try (ResultSet rs = mAccess.excuteSQL(sql)) {
+//            while (rs.next()) {
+//                InstructorExaminer trainer = new InstructorExaminer(rs);
+//                int trainerId = dbConnection.saveTrainer(trainer, lookups);
+//                trainer.setId(trainerId);
+//                lookups.addInstructor(trainer.getOldId(), trainer);
+//                InstructorExaminer examiner = new InstructorExaminer(rs);
+//                int examinerId = dbConnection.saveExaminer(examiner, lookups);
+//                examiner.setId(examinerId);
+//                lookups.addExaminer(examiner.getOldId(), examiner);
+//            }
+//        }
+//    }
 
     private void createCourseInst() throws SQLException {
         logger.debug("Processing {} BookedCourses records", getRecordCount("BookedCourses"));

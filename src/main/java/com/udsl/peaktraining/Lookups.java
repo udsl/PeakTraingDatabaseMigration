@@ -14,8 +14,6 @@ public class Lookups {
     private static final Logger logger = LogManager.getLogger(Lookups.class.getName());
 
     private final Map<Integer, Integer> dupCompanyMap = new HashMap<>();
-    private final Map<Integer, InstructorExaminer> instructorMap = new HashMap<>();
-    private final Map<Integer, InstructorExaminer> examinerMap = new HashMap<>();
 
     private Connection conn;
     private Server h2Server = null;
@@ -220,20 +218,6 @@ public class Lookups {
         throw new SQLException("Record not found for old course id" + oldId);
     }
 
-    public int getInstructor(int oldId){
-        logger.debug("Looking up Instructor id {}", oldId);
-        int newInstructorId = instructorMap.get(oldId).getId();
-        logger.debug("Returning instructorId {}", newInstructorId);
-        return newInstructorId;
-    }
-
-    public int getExaminer(int oldId){
-        logger.debug("Looking up Examiner id {}", oldId);
-        int newExaminerId = examinerMap.get(oldId).getId();
-        logger.debug("Returning examinerId {}", newExaminerId);
-        return newExaminerId;
-    }
-
     private static final String PUT_COURSE_MAP_SQL = "INSERT INTO COURSE_MAP (ID, ORIG_ID, COURSE_TITLE, CERTIFICATE_PREFIX, CERTIFICATE_COUNT) VALUES (?, ?, ?, ?, ?)";
     private PreparedStatement putCourseStatment = null ;
 
@@ -248,16 +232,6 @@ public class Lookups {
         putCourseStatment.setString(4, course.getCertificatePrefix());
         putCourseStatment.setInt(5, course.getCertificateCount());
         putCourseStatment.executeUpdate();
-    }
-
-    public void addInstructor(int oldId, InstructorExaminer instructor) {
-        logger.debug("Adding Instructor from old id {} -> {}", oldId, instructor);
-        instructorMap.put(oldId, instructor);
-    }
-
-     public void addExaminer(int oldId, InstructorExaminer examiner) {
-        logger.debug("Adding Examinier from old id {} -> {}", oldId, examiner);
-        examinerMap.put(oldId, examiner);
     }
 
     private static final String PUT_COURSE_INS_MAP_SQL = "INSERT INTO COURSE_INS (ID, ORIG_ID, COURSE_TEMPLATE_ID, INSTANCE_NUMBNER, DESCRIPTION , START_DATE, END_DATE, DAYS, HELD_AT, EXAMINER ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";

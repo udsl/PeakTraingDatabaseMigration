@@ -150,7 +150,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static final String SAVE_COURSE_INS_SQL = "INSERT INTO course_ins (course_def_id, instance_number, description, start_date, days, held_at, instructor_id, examiner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    private static final String SAVE_COURSE_INS_SQL = "INSERT INTO course_ins (course_def_id, instance_number, description, start_date, days, held_at, instructor_id, examiner_id) VALUES (?, ?, ?, ?, ?, ?, 1, 1)";
     PreparedStatement saveCourseInsStmt = null ;
     public int saveCourseIns(CourseIns courseIns, Lookups lookups) throws SQLException {
         logger.info("Saving courseIns: {}", courseIns);
@@ -164,10 +164,6 @@ public class DbConnection {
         saveCourseInsStmt.setDate(4, Date.valueOf(courseIns.getStartDate()));
         saveCourseInsStmt.setInt(5, courseIns.getDays());
         saveCourseInsStmt.setString(6, courseIns.getHeldAt());
-        // Old system only has examiner so set Instructor and Examiner to same value.
-        saveCourseInsStmt.setInt(7, lookups.getInstructor(courseIns.getExaminer()));
-        saveCourseInsStmt.setInt(8, lookups.getExaminer(courseIns.getExaminer()));
-
         int inserted = saveCourseInsStmt.executeUpdate();
         if (inserted == 1) {
             ResultSet rs = saveCourseInsStmt.getGeneratedKeys();
