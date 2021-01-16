@@ -41,15 +41,14 @@ public class PeakTraingDataMigration  implements CommandLineRunner {
 
     void run() throws SQLException{
         try {
-            dbConnection.startTrans();
+//            dbConnection.startTrans();
             createCompanys();
             createTrainees();
-//            createInstructorsExaminers(); // Old system trainers and examiners where same list of people
             createCourseDef();
             createCourseInst();
             updateCourseDef();
             processAttendants();
-            dbConnection.doCommit();
+//            dbConnection.doCommit();
             logger.info("END!");
         }
         finally {
@@ -65,7 +64,6 @@ public class PeakTraingDataMigration  implements CommandLineRunner {
 
     void closeConection() throws SQLException {
         dbConnection.closeConection();
-        lookups.closeConection();
     }
 
     private static final String COUNT_QUERY_SQL = "select count(*) from [?]";
@@ -106,23 +104,6 @@ public class PeakTraingDataMigration  implements CommandLineRunner {
         }
     }
 
-//    private void createInstructorsExaminers() throws SQLException {
-//        logger.debug("Processing {} Instructor records", getRecordCount("Trainers"));
-//        String sql = "SELECT [TrainerID], [Firstname], [Surname], [RegNumber] FROM [Trainers]";
-//        try (ResultSet rs = mAccess.excuteSQL(sql)) {
-//            while (rs.next()) {
-//                InstructorExaminer trainer = new InstructorExaminer(rs);
-//                int trainerId = dbConnection.saveTrainer(trainer, lookups);
-//                trainer.setId(trainerId);
-//                lookups.addInstructor(trainer.getOldId(), trainer);
-//                InstructorExaminer examiner = new InstructorExaminer(rs);
-//                int examinerId = dbConnection.saveExaminer(examiner, lookups);
-//                examiner.setId(examinerId);
-//                lookups.addExaminer(examiner.getOldId(), examiner);
-//            }
-//        }
-//    }
-
     private void createCourseInst() throws SQLException {
         logger.debug("Processing {} BookedCourses records", getRecordCount("BookedCourses"));
         String sql = "SELECT [courseId], [TemplateCourseID], [CourseTemplateName], [CourseReference], [trainerID], [CourseVenue], [CourseStartDate], [CourseEndDate], [Examiner] FROM [BookedCourses]";
@@ -158,7 +139,7 @@ public class PeakTraingDataMigration  implements CommandLineRunner {
 
     void createCompanys() throws SQLException {
         logger.debug("Processing {} CompanySelfSponsored records", getRecordCount("CompanySelfSponsored"));
-        String sql = "SELECT [companyID], [name], [address1], [address2], [address3], [address4], [postcode], [contact], [telephone], [mobile] FROM [CompanySelfSponsored] ORDER BY [name]";
+        String sql = "SELECT [companyID], [name], [address1], [address2], [address3], [address4], [postcode], [contact], [telephone], [email], [mobile] FROM [CompanySelfSponsored] ORDER BY [name]";
         try (ResultSet rs = mAccess.excuteSQL(sql)) {
             while (rs.next()) {
                 String name = rs.getString("name");

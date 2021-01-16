@@ -20,13 +20,14 @@ public class DbConnection {
     public DbConnection() {
         try {
             String hostname = InetAddress.getLocalHost().getHostName();
-            if ("XENOSMILUS".equals(hostname)) { // Home
-                conn = DriverManager.getConnection("jdbc:postgresql://smilodon:5432/postgres", "iangodman", "password");
-            }
-            else{ // Peak Training
+            if ("XENOSMILUS".equals(hostname) || "SABERTOOTH".equals(hostname)) { // Home
+                conn = DriverManager.getConnection("jdbc:postgresql://192.168.1.7:5432/postgres", "iangodman", "password");
+            } else { // Peak Training
                 conn = DriverManager.getConnection("jdbc:postgresql://192.168.1.127:5432/postgres", "postgres", "password");
             }
-        } catch (SQLException throwables) {
+        }catch (RuntimeException e) {
+            System.out.println("except");
+        }catch (SQLException throwables) {
             throwables.printStackTrace();
             System.exit(99);
         } catch (UnknownHostException e) {
@@ -79,7 +80,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static final String SAVE_CONTACT_SQL = "INSERT INTO contact (company_id, name, email, phone, mobile) VALUES (?, ?, ?, ?, ?)";
+    private static final String SAVE_CONTACT_SQL = "INSERT INTO contact (company_id, name, email, phone) VALUES (?, ?, ?, ?)";
 
     PreparedStatement saveContactStmt = null ;
     public int saveContact(Contact contact) throws SQLException {
@@ -91,7 +92,6 @@ public class DbConnection {
         saveContactStmt.setString(2, contact.getName());
         saveContactStmt.setString(3, contact.getEmail());
         saveContactStmt.setString(4, contact.getPhone());
-        saveContactStmt.setString(5, contact.getMobile());
 
         int inserted = saveContactStmt.executeUpdate();
         if (inserted == 1) {
@@ -150,7 +150,7 @@ public class DbConnection {
         return generatedkey;
     }
 
-    private static final String SAVE_COURSE_INS_SQL = "INSERT INTO course_ins (course_def_id, instance_number, description, start_date, days, held_at, instructor_id, examiner_id) VALUES (?, ?, ?, ?, ?, ?, 1, 1)";
+    private static final String SAVE_COURSE_INS_SQL = "INSERT INTO course_ins (course_def_id, description, start_date, days, held_at, instructor_id, examiner_id) VALUES (?, ?, ?, ?, ?, 1, 1)";
     PreparedStatement saveCourseInsStmt = null ;
     public int saveCourseIns(CourseIns courseIns, Lookups lookups) throws SQLException {
         logger.info("Saving courseIns: {}", courseIns);
@@ -159,11 +159,10 @@ public class DbConnection {
             saveCourseInsStmt = conn.prepareStatement(SAVE_COURSE_INS_SQL, Statement.RETURN_GENERATED_KEYS);
         }
         saveCourseInsStmt.setInt(1, lookups.getCourseDefId(courseIns.getCourseTemplateId()));
-        saveCourseInsStmt.setInt(2, courseIns.getAndSetInstanceNumber());
-        saveCourseInsStmt.setString(3, courseIns.getDescription());
-        saveCourseInsStmt.setDate(4, Date.valueOf(courseIns.getStartDate()));
-        saveCourseInsStmt.setInt(5, courseIns.getDays());
-        saveCourseInsStmt.setString(6, courseIns.getHeldAt());
+        saveCourseInsStmt.setString(2, courseIns.getDescription());
+        saveCourseInsStmt.setDate(3, Date.valueOf(courseIns.getStartDate()));
+        saveCourseInsStmt.setInt(4, courseIns.getDays());
+        saveCourseInsStmt.setString(5, courseIns.getHeldAt());
         int inserted = saveCourseInsStmt.executeUpdate();
         if (inserted == 1) {
             ResultSet rs = saveCourseInsStmt.getGeneratedKeys();
@@ -281,7 +280,7 @@ public class DbConnection {
 
     private static final String GET_COURSE_INS_COUNT_SQL = "SELECT count(*) from course_ins WHERE course_def_id = ?";
     private static final String GET_COURSE_DAYS_SQL = "SELECT days, count(days) as days_count from course_ins WHERE course_def_id = ? and days != 0 group by days order by days_count desc;";
-    private static final String UPDATE_COURSE_DEF_SQL = "UPDATE course_def SET next_instance = ?, def_days = ? WHERE course_def_id = ?";
+    private static final String UPDATE_COURSE_DEF_SQL = "UPDATE course_def SET def_days = ? WHERE course_def_id = ?";
     PreparedStatement getCourseInsCountStmt = null ;
     PreparedStatement getCourseDaysStmt = null ;
     PreparedStatement updateCourseDefStmt = null ;
@@ -308,9 +307,8 @@ public class DbConnection {
                         days = rsDays.getInt(1);
                     }
                     logger.info("Found {} records for course def {}", count, id);
-                    updateCourseDefStmt.setInt(1, count + 1);
-                    updateCourseDefStmt.setInt(2, days);
-                    updateCourseDefStmt.setInt(3, id);
+                    updateCourseDefStmt.setInt(1, days);
+                    updateCourseDefStmt.setInt(2, id);
                     updateCourseDefStmt.executeUpdate();
                 }
             }
