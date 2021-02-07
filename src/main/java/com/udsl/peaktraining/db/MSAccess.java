@@ -2,12 +2,17 @@ package com.udsl.peaktraining.db;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.sql.*;
 
-
+@Component
 public class MSAccess {
     private static final Logger logger = LogManager.getLogger(MSAccess.class.getName());
+
+    @Value("${msaccess.showsql}")
+    boolean showSQL;
 
     private Connection conn = null;
 
@@ -24,7 +29,9 @@ public class MSAccess {
     }
 
     public ResultSet excuteSQL(String sql) throws SQLException {
-        logger.info("MSAccess - {}", sql);
+        if (showSQL) {
+            logger.info("MSAccess - {}", sql);
+        }
         return getStatement().executeQuery( sql );
     }
 }

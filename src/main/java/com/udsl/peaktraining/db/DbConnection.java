@@ -3,6 +3,8 @@ package com.udsl.peaktraining.db;
 import com.udsl.peaktraining.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -12,18 +14,34 @@ import java.util.List;
 
 import static java.lang.Math.max;
 
+@Component
 public class DbConnection {
     private static final Logger logger = LogManager.getLogger(DbConnection.class.getName());
 
+    @Value("${needTransaction}")
+    private boolean needTransaction;
+
+    @Value("${clearPostgress}")
+    private boolean clearPostgress;
+
+    @Value("#{'${tablesToClearList}'.split(',')}")
+    List<String> tablesClearList;
+
     private Connection conn = null;
 
-    public DbConnection() {
+    public void openConnection() {
         try {
             String hostname = InetAddress.getLocalHost().getHostName();
             if ("XENOSMILUS".equals(hostname) || "SABERTOOTH".equals(hostname)) { // Home
                 conn = DriverManager.getConnection("jdbc:postgresql://192.168.1.7:5432/postgres", "iangodman", "password");
             } else { // Peak Training
                 conn = DriverManager.getConnection("jdbc:postgresql://192.168.1.127:5432/postgres", "postgres", "password");
+            }
+            if (clearPostgress){
+                doClearPostgres();
+            }
+            if (needTransaction) {
+                conn.setAutoCommit(false);
             }
         }catch (RuntimeException e) {
             System.out.println("except");
@@ -36,23 +54,28 @@ public class DbConnection {
         }
     }
 
-    public void closeConection() throws SQLException {
-        if (conn != null) {
-            conn.close();
-            conn = null;
+    private void doClearPostgres() {
+        try {
+            String truncateSQL = "TRUNCATE " ;
+            for(String tableName : tablesClearList){
+                String theSQL = truncateSQL + tableName + " CASCADE";
+                logger.info(theSQL);
+                PreparedStatement stmt = conn.prepareStatement(theSQL);
+                stmt.execute();
+            }
+        } catch (Exception throwables) {
+            throwables.printStackTrace();
         }
     }
 
-    public void startTrans() throws SQLException {
-        conn.setAutoCommit(false);
-    }
-
-    public void doCommit() throws SQLException {
-        conn.commit();
-    }
-
-    public void doRollback() throws SQLException {
-        conn.rollback();
+    public void closeConnection() throws SQLException {
+        if (conn != null) {
+            if (!conn.getAutoCommit()){
+                conn.commit();
+            }
+            conn.close();
+            conn = null;
+        }
     }
 
     private static final String SAVE_COMPANY_SQL = "INSERT INTO company (company_name, addr1, addr2, addr3, addr4, postcode) VALUES (?, ?, ?, ?, ?, ?)";
@@ -169,48 +192,6 @@ public class DbConnection {
             if (rs.next()) {
                 generatedkey = rs.getInt(1);
                 logger.info("Auto Generated Course Primary Key {}", generatedkey);
-            }
-        }
-        return generatedkey;
-    }
-
-    private static final String SAVE_INSTRUCTOR_SQL = "INSERT INTO instructor (name, reg_num) VALUES (?, ?)";
-    PreparedStatement saveInstructorStmt = null ;
-    public int saveTrainer(InstructorExaminer instructor, Lookups lookups) throws SQLException {
-        int generatedkey = 0;
-        if (saveInstructorStmt == null) {
-            saveInstructorStmt = conn.prepareStatement(SAVE_INSTRUCTOR_SQL, Statement.RETURN_GENERATED_KEYS);
-        }
-        saveInstructorStmt.setString(1, instructor.getForename() + " " + instructor.getSurname());
-        saveInstructorStmt.setString(2, instructor.getRegNumber());
-
-        int inserted = saveInstructorStmt.executeUpdate();
-        if (inserted == 1) {
-            ResultSet rs = saveInstructorStmt.getGeneratedKeys();
-            if (rs.next()) {
-                generatedkey = rs.getInt(1);
-                logger.info("Auto Generated Instructor Primary Key {}", generatedkey);
-            }
-        }
-        return generatedkey;
-    }
-
-    private static final String SAVE_EXAMINER_SQL = "INSERT INTO examiner (name, reg_num) VALUES (?, ?)";
-    PreparedStatement saveExaminerStmt = null ;
-    public int saveExaminer(InstructorExaminer examiner, Lookups lookups) throws SQLException {
-        int generatedkey = 0;
-        if (saveExaminerStmt == null) {
-            saveExaminerStmt = conn.prepareStatement(SAVE_EXAMINER_SQL, Statement.RETURN_GENERATED_KEYS);
-        }
-        saveExaminerStmt.setString(1, examiner.getForename() + " " + examiner.getSurname());
-        saveExaminerStmt.setString(2, examiner.getRegNumber());
-
-        int inserted = saveExaminerStmt.executeUpdate();
-        if (inserted == 1) {
-            ResultSet rs = saveExaminerStmt.getGeneratedKeys();
-            if (rs.next()) {
-                generatedkey = rs.getInt(1);
-                logger.info("Auto Generated Examiner Primary Key {}", generatedkey);
             }
         }
         return generatedkey;

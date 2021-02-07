@@ -1,5 +1,6 @@
 package com.udsl.peaktraining;
 
+import com.udsl.peaktraining.db.H2Connection;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -7,51 +8,29 @@ import java.sql.*;
 import java.sql.Date;
 import java.util.*;
 
-import org.h2.jdbcx.JdbcDataSource;
-import org.h2.tools.Server;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+@Component
 public class Lookups {
     private static final Logger logger = LogManager.getLogger(Lookups.class.getName());
 
     private final Map<Integer, Integer> dupCompanyMap = new HashMap<>();
 
-    private Connection conn;
-    private Server h2Server = null;
+    @Value("${clearH2DB}")
+    private boolean clearH2DB;
+
+    @Autowired
+    H2Connection conn ;
 
     public Lookups() throws SQLException {
-        h2Server = Server.createTcpServer().start();
-        if (h2Server.isRunning(true)) {
-            logger.error("H2 server was started and is running.");
-        } else {
-            throw new RuntimeException("Could not start H2 server.");
-        }
-
-        JdbcDataSource ds = new JdbcDataSource();
-        // ds.setURL("jdbc:h2:~/IdeaProjects/PeakTraingDatabaseMigration/app_db/test");
-        ds.setURL("jdbc:h2:tcp://localhost:9092/~/IdeaProjects/PeakTraingDatabaseMigration/app_db/test");
-        ds.setUser("sa");
-        ds.setPassword("sa");
-        try {
-            conn = ds.getConnection();
+        if (clearH2DB) {
             clearDatabaseTables();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
         }
-    }
+     }
 
-    void closeConection() {
-        try {
-            if (h2Server != null) {
-                conn.close();
-                conn = null ;
-                h2Server.stop();
-                h2Server.shutdown();
-                h2Server = null;
-            }
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
-    }
 
     private void clearDatabaseTables(){
         String[] tables = {"COMPANY_MAP", "TRAINEE_MAP", "COURSE_MAP", "ATTENDEE_MAP", "COURSE_INS"} ;
@@ -62,7 +41,7 @@ public class Lookups {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
-    }
+     }
 
     private static final String SAVE_COMAPNY_MAP_SQL = "INSERT INTO COMPANY_MAP (ID, ORIG_ID, NAME, ADDRESS1, ADDRESS2, ADDRESS3, ADDRESS4, POSTCODE) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     PreparedStatement putCompanyMapStatment = null;
@@ -126,7 +105,7 @@ public class Lookups {
     private static final String GET_TRAINEE_MAP_SQL = "SELECT ID FROM TRAINEE_MAP WHERE ORIG_ID = ?";
     private PreparedStatement newTraineeIdStatment = null ;
 
-    public int getNewTrianeeId(int oldId) throws SQLException {
+    public Integer getNewTrianeeId(int oldId) throws SQLException {
         logger.info("Looking up trainee id {}", oldId);
         if (newTraineeIdStatment == null) {
             newTraineeIdStatment = conn.prepareStatement(GET_TRAINEE_MAP_SQL);
@@ -136,7 +115,8 @@ public class Lookups {
             if (res.next()) {
                 return res.getInt(1);
             }
-            throw new SQLException("Record not found for trainee id" + oldId);
+            logger.error("Record not found for trainee id" + oldId);
+            return null;
         }
     }
 

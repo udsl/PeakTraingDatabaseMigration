@@ -5,65 +5,68 @@ import com.udsl.peaktraining.db.DbConnection;
 import com.udsl.peaktraining.db.MSAccess;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.boot.CommandLineRunner;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.stereotype.Component;
 
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 
-@SpringBootApplication
-public class PeakTraingDataMigration  implements CommandLineRunner {
-    private static final Logger logger = LogManager.getLogger(PeakTraingDataMigration.class.getName());
+@Component
+public class PeakTrainingMigration implements ApplicationContextAware {
+    private static final Logger logger = LogManager.getLogger(PeakTrainingMigration.class.getName());
     private static final Logger errorsLogger = LogManager.getLogger("errors-log");
+
+    private ApplicationContext context;
 
     String[] knowDuplicates = {"IAN YOUNG", "GARRY SHAW ROOFING SERVICES", "EKSPAN", "DARREN EDWARDS"};
 
-    Lookups lookups ;
-    MSAccess mAccess ;
-    DbConnection dbConnection;
+    @Autowired
+    private Lookups lookups ;
 
-    public static void main(String[] args) {
-        SpringApplication.run(PeakTraingDataMigration.class, args);
-    }
+    @Autowired
+    private MSAccess mAccess ;
+
+    @Autowired
+    private DbConnection dbConnection;
+
+    @Autowired
+    private BookedCourseMigration courseMigration;
+
+    @Value("${fullMigration}")
+    private boolean fullMigration;
 
     @Override
-    public void run(String... args) throws Exception {
-        logger.info("Peak Training data migration starting . . .");
-        try {
-            PeakTraingDataMigration app = new PeakTraingDataMigration();
-            app.run();
-        } catch (Exception e) {
-            logger.error("Caught exception {}", e.getMessage(), e);
-        }
+    public void setApplicationContext(ApplicationContext ctx) throws BeansException {
+        this.context = ctx;
     }
 
-    void run() throws SQLException{
+    void runMigration() throws SQLException {
         try {
-//            dbConnection.startTrans();
-            createCompanys();
-            createTrainees();
-            createCourseDef();
-            createCourseInst();
-            updateCourseDef();
-            processAttendants();
-//            dbConnection.doCommit();
+            dbConnection.openConnection();
+            if (fullMigration) {
+                createCompanys();
+                createTrainees();
+                createCourseDef();
+                createCourseInst();
+                updateCourseDef();
+                processAttendants();
+            }
+            courseMigration.doMigration();
+            dbConnection.closeConnection();
             logger.info("END!");
+            SpringApplication.exit(context, () -> 0);
         }
         finally {
-            closeConection();
+            dbConnection.closeConnection();
         }
-    }
-
-    PeakTraingDataMigration() throws SQLException {
-        lookups = new Lookups();
-        mAccess = new MSAccess();
-        dbConnection = new DbConnection();
-    }
-
-    void closeConection() throws SQLException {
-        dbConnection.closeConection();
     }
 
     private static final String COUNT_QUERY_SQL = "select count(*) from [?]";
@@ -208,4 +211,5 @@ public class PeakTraingDataMigration  implements CommandLineRunner {
         }
 
     }
+
 }
