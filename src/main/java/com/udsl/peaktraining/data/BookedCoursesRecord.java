@@ -19,6 +19,8 @@ public class BookedCoursesRecord {
     private LocalDate courseStartDate;
     private LocalDate courseEndDate;
 
+    private int mappedCourseId;
+
     public BookedCoursesRecord(ResultSet rs ) throws SQLException {
         courseId = rs.getInt("CourseID");
         templateCourseID= rs.getInt("TemplateCourseID");

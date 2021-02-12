@@ -6,6 +6,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 public class BookedCoursesContent {
@@ -18,7 +21,7 @@ public class BookedCoursesContent {
     private String model;
     private String capacity;
     private String attachment;
-    private String courseElements;
+    private List<String> courseElements = new ArrayList<>();
 
     private static final String PERSIST_SQL = "INSERT INTO BOOKED_COURSE_CONTENT (ORIG_COURSE_ID) VALUES (?)";
     private static PreparedStatement PERSIST_SMT = null;
@@ -48,21 +51,13 @@ public class BookedCoursesContent {
     }
 
     public void addCourseElement( String element){
-        if (courseElements != null && courseElements != ""){
-            courseElements = courseElements + "\n" + element;
-        }
-        else{
-            courseElements = element;
-        }
+        courseElements.add(element);
     }
 
     private static final String SET_STRING_FIELD_SQL = "UPDATE BOOKED_COURSE_CONTENT SET %s = ? WHERE ID = ?";
     private static PreparedStatement SET_STRING_FIELD_SMT = null;
 
     public boolean updateField(H2Connection conn, String fieldName, String value) throws SQLException {
- //       String sql = String.format("UPDATE BOOKED_COURSE_CONTENT SET %s = %s WHERE ID = %d", fieldName, value, id);
-//        Statement stmt = conn.createStatement();
-//        return stmt.executeUpdate(sql) > 0;
         SET_STRING_FIELD_SMT = conn.prepareStatement(String.format(SET_STRING_FIELD_SQL, fieldName) );
         SET_STRING_FIELD_SMT.setString(1, value);
         SET_STRING_FIELD_SMT.setInt(2, id);
@@ -74,5 +69,9 @@ public class BookedCoursesContent {
         String sql = String.format("UPDATE BOOKED_COURSE_CONTENT SET %s = %d WHERE ID = %d", fieldName, value, id);
         Statement stmt = conn.createStatement();
         return stmt.executeUpdate(sql) > 0;
+    }
+
+    public String getCourseElimentString(){
+        return String.join("\n", courseElements);
     }
 }

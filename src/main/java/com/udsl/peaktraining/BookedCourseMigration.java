@@ -2,6 +2,9 @@ package com.udsl.peaktraining;
 
 import com.udsl.peaktraining.data.BookedCoursesContent;
 import com.udsl.peaktraining.data.BookedCoursesRecord;
+import com.udsl.peaktraining.data.CourseIns;
+import com.udsl.peaktraining.data.CourseInsRecord;
+import com.udsl.peaktraining.db.DbConnection;
 import com.udsl.peaktraining.db.H2Connection;
 import com.udsl.peaktraining.db.MSAccess;
 import org.apache.logging.log4j.LogManager;
@@ -12,7 +15,12 @@ import org.springframework.stereotype.Component;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -29,7 +37,11 @@ public class BookedCourseMigration {
     @Autowired
     H2Connection conn ;
 
+    @Autowired
+    DbConnection postgres;
+
     List<BookedCoursesRecord> bookedCourseList = new ArrayList<>();
+    List<BookedCoursesContent> bookedCoursesContentList = new ArrayList<>();
 
     public void doMigration(){
         logger.info("Starting Booked Course Migration");
@@ -40,11 +52,49 @@ public class BookedCourseMigration {
             throwables.printStackTrace();
         }
         if (migratePopulateBookedCoursesMap()){
-             logger.info("BookedCoursesMap populated.");
-             if (migratePopulateBookedCourseContent()){
-                 logger.info("BookedCoursesContent populated.");
+             logger.info("BookedCoursesMap populated, verifying . . .");
+             if (verifyMapperCourses()) {
+                 logger.info("BookedCoursesContent verified against postgres db.");
+                 if (migratePopulateBookedCourseContent()) {
+                     logger.info("BookedCoursesContent populated.");
+                     if (completeMigration()){
+                         logger.info("Migration of courses complete!");
+                     }
+                 }
              }
         }
+    }
+
+    private boolean completeMigration(){
+        for (BookedCoursesContent record: bookedCoursesContentList) {
+             int idToUpdate = record.getMappedCourseId();
+            try {
+                postgres.updateCourseInsRecord (idToUpdate, record.getModel(), record.getCapacity(), record.getAttachment(), record.getEquipment(), record.getCourseElements());
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean verifyMapperCourses(){
+        for (BookedCoursesRecord record: bookedCourseList) {
+            try {
+                CourseInsRecord postgresObject = postgres.getCourseInsRecord(record.getMappedCourseId());
+                Date input = postgresObject.getStart_date();
+
+                LocalDate startDate = new java.sql.Date(input.getTime()).toLocalDate();
+                LocalDate startDateRec = record.getCourseStartDate();
+                if (startDateRec.compareTo( startDate ) != 0){
+                    logger.error("Date {} not equal to {}", record.getCourseStartDate(), postgresObject.getStart_date());
+                }
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean migratePopulateBookedCourseContent(){
@@ -54,14 +104,18 @@ public class BookedCourseMigration {
             try (ResultSet rs = mAccess.excuteSQL(String.format(sql, record.getCourseId()))){
                 if (rs.next()) {
                     BookedCoursesContent content =  new BookedCoursesContent(record.getCourseId());
+
                     content.persist(conn);
                     processCourseContentRecord(rs, content);
-                    content.updateField(conn, "MAPPED_COURSE_ID", lookups.getMappedCourseInsId(content.getOriginalCourseId()));
+                    int mappedCourseId =  lookups.getMappedCourseInsId(content.getOriginalCourseId());
+                    content.setMappedCourseId(mappedCourseId);
+                    content.updateField(conn, "MAPPED_COURSE_ID", mappedCourseId);
                     content.updateField(conn, "EQUIPMENT", content.getEquipment());
                     content.updateField(conn, "MODEL", content.getModel());
                     content.updateField(conn, "CAPACITY", content.getCapacity());
                     content.updateField(conn, "ATTACHMENT", content.getAttachment());
-                    content.updateField(conn, "COURSE_ELEMENTS", content.getCourseElements());
+                    content.updateField(conn, "COURSE_ELEMENTS", content.getCourseElimentString());
+                    bookedCoursesContentList.add(content);
                 }
             } catch (SQLException e) {
                 logger.error(e);
@@ -112,7 +166,10 @@ public class BookedCourseMigration {
                 BookedCoursesRecord record = new BookedCoursesRecord(rs);
                 if (record.persist(conn)) {
                     bookedCourseList.add(record);
-                    record.updateField(conn, "ORIG_COURSE_ID", lookups.getMappedCourseInsId(record.getCourseId()));
+                    int mappedId = lookups.getMappedCourseInsId(record.getCourseId());
+                    record.setMappedCourseId(mappedId);
+                    record.updateField(conn, "MAPPED_COURSE_ID", mappedId);
+
                  }
                 else{
                     logger.error("Failed to persist {}", record);

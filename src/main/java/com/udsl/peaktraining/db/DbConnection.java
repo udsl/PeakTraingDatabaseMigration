@@ -260,6 +260,42 @@ public class DbConnection {
         saveCourseResultsStmt.executeUpdate();
     }
 
+    private static final String UPDATE_COURSE_INS_SQL = "UPDATE course_ins SET model = ?, capacity = ?, attachment = ?, equipment = ?, course_elements = ?  WHERE course_ins_id = ?";
+    PreparedStatement updateCourseInsStmt = null ;
+    public void updateCourseInsRecord (int courseId, String model, String capacity, String attachment, String equipment, List<String> course_elements) throws SQLException {
+        logger.info("updateCourseInsRecord (courseId: {}, model: {}, capacity: {}, attachment: {}, equipment: {}, course_elements: {})", courseId, model, capacity, attachment, equipment, course_elements);
+        if (updateCourseInsStmt == null) {
+            updateCourseInsStmt = conn.prepareStatement(UPDATE_COURSE_INS_SQL);
+        }
+        updateCourseInsStmt.setString(1, model);
+        updateCourseInsStmt.setString(2, capacity);
+        updateCourseInsStmt.setString(3, attachment);
+        updateCourseInsStmt.setString(4, equipment);
+
+        String[] strArray = course_elements.toArray(new String[course_elements.size()]);
+        Array elementArray = conn.createArrayOf("text", strArray);
+        updateCourseInsStmt.setArray(5, elementArray);
+
+        updateCourseInsStmt.setInt(6, courseId);
+        updateCourseInsStmt.executeUpdate();
+    }
+
+    private static final String GRT_COURSE_INS_SQL = "SELECT * FROM course_ins WHERE course_ins_id = ?";
+    PreparedStatement getCourseInsStmt = null ;
+    public CourseInsRecord getCourseInsRecord(int courseId) throws SQLException {
+        CourseInsRecord result = null;
+        if (getCourseInsStmt == null) {
+            getCourseInsStmt = conn.prepareStatement(GRT_COURSE_INS_SQL);
+        }
+        getCourseInsStmt.setInt(1, courseId);
+        try (ResultSet rs = getCourseInsStmt.executeQuery()) {
+            if (rs.next()) {
+                result = new CourseInsRecord(rs);
+            }
+        }
+        return result;
+    }
+
     private static final String GET_COURSE_INS_COUNT_SQL = "SELECT count(*) from course_ins WHERE course_def_id = ?";
     private static final String GET_COURSE_DAYS_SQL = "SELECT days, count(days) as days_count from course_ins WHERE course_def_id = ? and days != 0 group by days order by days_count desc;";
     private static final String UPDATE_COURSE_DEF_SQL = "UPDATE course_def SET def_days = ? WHERE course_def_id = ?";
