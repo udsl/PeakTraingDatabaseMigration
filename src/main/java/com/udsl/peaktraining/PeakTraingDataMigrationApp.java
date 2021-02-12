@@ -1,19 +1,11 @@
 package com.udsl.peaktraining;
 
-import com.udsl.DataException;
-import com.udsl.peaktraining.db.DbConnection;
-import com.udsl.peaktraining.db.MSAccess;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import java.sql.*;
-import java.util.Arrays;
-import java.util.List;
 
 @SpringBootApplication
 public class PeakTraingDataMigrationApp implements CommandLineRunner {
@@ -35,4 +27,4 @@ public class PeakTraingDataMigrationApp implements CommandLineRunner {
             logger.error("Caught exception {}", e.getMessage(), e);
         }
     }
- }
+}

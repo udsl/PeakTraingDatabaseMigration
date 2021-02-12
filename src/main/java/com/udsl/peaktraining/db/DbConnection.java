@@ -1,6 +1,7 @@
 package com.udsl.peaktraining.db;
 
 import com.udsl.peaktraining.*;
+import com.udsl.peaktraining.data.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
@@ -206,7 +207,7 @@ public class DbConnection {
             saveAttendeeStmt = conn.prepareStatement(SAVE_ATTENDEE_SQL, Statement.RETURN_GENERATED_KEYS);
         }
         saveAttendeeStmt.setInt(1, lookups.getNewTrianeeId(attendee.getDelegateID()));
-        saveAttendeeStmt.setInt(2, lookups.getCourseInsId(attendee.getCourseID()));
+        saveAttendeeStmt.setInt(2, lookups.getMappedCourseInsId(attendee.getCourseID()));
 
         int inserted = saveAttendeeStmt.executeUpdate();
         if (inserted == 1) {
@@ -226,7 +227,7 @@ public class DbConnection {
             saveCourseResultsStmt = conn.prepareStatement(SAVE_COURSE_RESULTS_SQL);
         }
         saveCourseResultsStmt.setInt(1, attendee.getId());
-        saveCourseResultsStmt.setInt(2, lookups.getCourseInsId(attendee.getCourseID()));
+        saveCourseResultsStmt.setInt(2, lookups.getMappedCourseInsId(attendee.getCourseID()));
         saveCourseResultsStmt.setBoolean(3, attendee.isPassed());
 
         if (attendee.getTheory() == null) {

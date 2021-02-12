@@ -1,4 +1,4 @@
-package com.udsl.peaktraining;
+package com.udsl.peaktraining.data;
 
 import com.udsl.DataException;
 import lombok.Getter;

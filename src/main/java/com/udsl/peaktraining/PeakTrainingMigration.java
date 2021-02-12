@@ -1,6 +1,7 @@
 package com.udsl.peaktraining;
 
 import com.udsl.DataException;
+import com.udsl.peaktraining.data.*;
 import com.udsl.peaktraining.db.DbConnection;
 import com.udsl.peaktraining.db.MSAccess;
 import org.apache.logging.log4j.LogManager;
@@ -11,7 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Component;
 
 import java.sql.ResultSet;
@@ -86,7 +86,7 @@ public class PeakTrainingMigration implements ApplicationContextAware {
                 if (rs.getInt("DelegateID")==0){
                     errorsLogger.debug("Attendants record fond with DelegateID = 0, skipping - {}", dbConnection.resultsetFieldsAndValuesToString(rs));
                 }
-                else if (lookups.getCourseInsId(rs.getInt("CourseID")) < 0){
+                else if (lookups.getMappedCourseInsId(rs.getInt("CourseID")) < 0){
                     errorsLogger.debug("Attendants record found with invalid CourseID, skipping - {}", dbConnection.resultsetFieldsAndValuesToString(rs));
                 }
                 else if (rs.getString("Passed") == null){

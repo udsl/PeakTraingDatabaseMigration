@@ -1,4 +1,4 @@
-package com.udsl.peaktraining;
+package com.udsl.peaktraining.data;
 
 import lombok.Getter;
 import lombok.ToString;
@@ -6,7 +6,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.time.LocalDate;
 

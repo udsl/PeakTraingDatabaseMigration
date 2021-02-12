@@ -1,5 +1,6 @@
 package com.udsl.peaktraining;
 
+import com.udsl.peaktraining.data.*;
 import com.udsl.peaktraining.db.H2Connection;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -145,7 +146,7 @@ public class Lookups {
     private static final String GET_ID_COURSE_INS_SQL = "SELECT ID FROM COURSE_INS WHERE ORIG_ID = ?";
     private PreparedStatement getIdCourseInsStatment = null ;
 
-    public int getCourseInsId(int oldId) throws SQLException {
+    public int getMappedCourseInsId(int oldId) throws SQLException {
         logger.info("Looked up courseInsId {}", oldId);
         if (getIdCourseInsStatment == null){
             getIdCourseInsStatment = conn.prepareStatement(GET_ID_COURSE_INS_SQL);

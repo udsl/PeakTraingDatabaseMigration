@@ -1,5 +1,6 @@
-package com.udsl.peaktraining;
+package com.udsl.peaktraining.data;
 
+import com.udsl.peaktraining.data.Company;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.logging.log4j.LogManager;
