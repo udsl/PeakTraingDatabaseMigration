@@ -14,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+
 @Component
 public class Lookups {
     private static final Logger logger = LogManager.getLogger(Lookups.class.getName());
@@ -26,7 +28,8 @@ public class Lookups {
     @Autowired
     H2Connection conn ;
 
-    public Lookups() throws SQLException {
+    @PostConstruct
+    public void init() throws SQLException {
         if (clearH2DB) {
             clearDatabaseTables();
         }
