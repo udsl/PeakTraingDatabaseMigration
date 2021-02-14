@@ -34,19 +34,59 @@ public class Attendants {
             passed = StringUtils.equalsIgnoreCase(rs.getString("Passed"), "y");
 
             String theoryStr = rs.getString("Theory");
-            if (theoryStr != null && theoryStr.equalsIgnoreCase("N/A")) {
+            logger.info("theoryStr: {}", theoryStr);
+
+            if (StringUtils.isEmpty(theoryStr)){
                 theory = 0;
             }
-            else{
-                theory = rs.getInt("Theory");
+            else {
+                theoryStr = theoryStr.toUpperCase().replace("`", "");
+                if (theoryStr.contains("N/A") || theoryStr.equalsIgnoreCase("PASS")
+                        || theoryStr.equalsIgnoreCase("N")) {
+                    theory = 0;
+                }
+                else{
+                    if (theoryStr.contains("/")){
+                        theoryStr = theoryStr.substring(0, theoryStr.indexOf("/"));
+                    }
+                    if (theoryStr.contains(" ")){
+                        theoryStr = theoryStr.substring(0, theoryStr.indexOf(" "));
+                    }
+                    if (theoryStr.contains("-")){
+                        theoryStr = theoryStr.substring(0, theoryStr.indexOf("-"));
+                    }
+                    if (StringUtils.isNumeric(theoryStr)) {
+                        theory = Integer.valueOf(theoryStr);
+                    }
+                }
             }
 
             String practicalFaultsStr = rs.getString("PracticalFaults");
-            if (practicalFaultsStr == null || practicalFaultsStr.equalsIgnoreCase("N/A")) {
-                practicalFaults = null;
+            logger.info("practicalFaultsStr: {}", practicalFaultsStr);
+
+            if (StringUtils.isEmpty(practicalFaultsStr)) {
+                practicalFaults = 0;
             }
-            else{
-                practicalFaults = rs.getInt("PracticalFaults");
+            else {
+                practicalFaultsStr = practicalFaultsStr.toUpperCase().replace("`", "");
+                if (practicalFaultsStr.contains("N/A")
+                        || practicalFaultsStr.equalsIgnoreCase("PASS")
+                        || theoryStr.equalsIgnoreCase("N")) {
+                    practicalFaults = 0;
+                } else {
+                    if (practicalFaultsStr.contains("/")) {
+                        practicalFaultsStr = practicalFaultsStr.substring(0, practicalFaultsStr.indexOf("/"));
+                    }
+                    if (practicalFaultsStr.contains(" ")) {
+                        practicalFaultsStr = practicalFaultsStr.substring(0, practicalFaultsStr.indexOf(" "));
+                    }
+                    if (practicalFaultsStr.contains("-")) {
+                        practicalFaultsStr = practicalFaultsStr.substring(0, practicalFaultsStr.indexOf("-"));
+                    }
+                    if (StringUtils.isNumeric(practicalFaultsStr)) {
+                        practicalFaults = Integer.valueOf(practicalFaultsStr);
+                    }
+                }
             }
 
             String failReasonStr = rs.getString("FailReason");
@@ -55,10 +95,11 @@ public class Attendants {
             }
 
             String furtherTrainingStr = rs.getString("FurtherTraining");
-            if (furtherTrainingStr != null && !furtherTrainingStr.equalsIgnoreCase("N/A")) {
+            if (!StringUtils.isEmpty(furtherTrainingStr) && !furtherTrainingStr.equalsIgnoreCase("N/A")) {
                 furtherTraining = furtherTrainingStr;
             }
         } catch (SQLException e) {
+            e.printStackTrace();
             logger.error("Exception creating Attendants - {}", e.getMessage());
         }
     }

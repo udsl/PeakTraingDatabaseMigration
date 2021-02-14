@@ -50,13 +50,10 @@ public class BookedCourseMigration {
         }
         if (migratePopulateBookedCoursesMap()){
              logger.info("BookedCoursesMap populated, verifying . . .");
-             if (verifyMapperCourses()) {
-                 logger.info("BookedCoursesContent verified against postgres db.");
-                 if (migratePopulateBookedCourseContent()) {
-                     logger.info("BookedCoursesContent populated.");
-                     if (updateBookedCourses()){
-                         logger.info("Booked courses updated.");
-                     }
+             if (migratePopulateBookedCourseContent()) {
+                 logger.info("BookedCoursesContent populated.");
+                 if (updateBookedCourses()){
+                     logger.info("Booked courses updated.");
                  }
              }
         }
@@ -67,25 +64,6 @@ public class BookedCourseMigration {
             int idToUpdate = record.getMappedCourseId();
             try {
                 postgres.updateCourseInsRecord (idToUpdate, record.getModel(), record.getCapacity(), record.getAttachment(), record.getEquipment(), record.getCourseElements());
-            } catch (SQLException throwables) {
-                throwables.printStackTrace();
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean verifyMapperCourses(){
-        for (BookedCoursesRecord record: bookedCourseList) {
-            try {
-                CourseInsRecord postgresObject = postgres.getCourseInsRecord(record.getMappedCourseId());
-                Date input = postgresObject.getStart_date();
-
-                LocalDate startDate = new java.sql.Date(input.getTime()).toLocalDate();
-                LocalDate startDateRec = record.getCourseStartDate();
-                if (startDateRec.compareTo( startDate ) != 0){
-                    logger.error("Date {} not equal to {}", record.getCourseStartDate(), postgresObject.getStart_date());
-                }
             } catch (SQLException throwables) {
                 throwables.printStackTrace();
                 return false;

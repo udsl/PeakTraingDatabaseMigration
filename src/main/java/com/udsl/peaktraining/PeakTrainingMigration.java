@@ -76,19 +76,25 @@ public class PeakTrainingMigration implements ApplicationContextAware {
     private static final String COUNT_QUERY_SQL = "select count(*) from [?]";
 
     private int getRecordCount(String tableName) throws SQLException {
-        try (ResultSet rsCount = mAccess.excuteSQL(COUNT_QUERY_SQL.replace("?", "Attendants"))) {
+        try (ResultSet rsCount = mAccess.excuteSQL(COUNT_QUERY_SQL.replace("?", tableName))) {
             rsCount.next();
-            return rsCount.getInt(1);
+            int count = rsCount.getInt(1);
+            logger.info("Table {} has {} records.", tableName, count);
+            return count;
         }
     }
 
     private void processAttendants() {
+        int toProcess = 0;
+        int processed = 0;
         try {
-            logger.debug("Processing {} Attendants records", getRecordCount("Attendants"));
+            toProcess = getRecordCount("Attendants");
+            logger.debug("Processing {} Attendants records", toProcess);
             String sql = "SELECT [AttendantID], [CourseID], [CompanyID], [DelegateID], [Passed], [Theory] [PracticalFaults], [FailReason], [FurtherTraining]  FROM [Attendants]";
             try (ResultSet rs = mAccess.excuteSQL(sql)) {
                 while (rs.next()) {
                     int courseId = rs.getInt("CourseID");
+                    processed = processed + 1 ;
                     if (courseExists(courseId)) {
                         int delegateId = rs.getInt("DelegateID");
                         int companyId = rs.getInt("CompanyID");
@@ -110,15 +116,22 @@ public class PeakTrainingMigration implements ApplicationContextAware {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
+        if (toProcess != processed){
+            throw new RuntimeException("Procesing count error.");
+        }
     }
 
     private boolean courseExists(int id){
-        String sql = String.format("SELECT count(*) FROM [BookedCourses] WHERE CourseId = %d", id);
+        String sql = String.format("SELECT count(*) FROM [BookedCourses] WHERE [CourseId] = %d", id);
         try (ResultSet rs = mAccess.excuteSQL(sql)){
             if (rs.next()) {
-                if (rs.getInt(1) != 1){
+                int v = rs.getInt(1);
+                if (v != 1){
                     addToUndefinedCourses(id);
                     return false;
+                }
+                else{
+                    return true;
                 }
             }
         }
