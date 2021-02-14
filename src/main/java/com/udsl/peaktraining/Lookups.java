@@ -1,6 +1,7 @@
 package com.udsl.peaktraining;
 
 import com.udsl.peaktraining.data.*;
+import com.udsl.peaktraining.db.DbConnection;
 import com.udsl.peaktraining.db.H2Connection;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,6 +28,9 @@ public class Lookups {
 
     @Autowired
     H2Connection conn ;
+
+    @Autowired
+    private DbConnection dbConnection;
 
     @PostConstruct
     public void init() throws SQLException {
@@ -106,22 +110,38 @@ public class Lookups {
         }
     }
 
-    private static final String GET_TRAINEE_MAP_SQL = "SELECT ID FROM TRAINEE_MAP WHERE ORIG_ID = ?";
+    private static final String GET_TRAINEE_MAP_SQL = "SELECT ID FROM TRAINEE_MAP WHERE ORIG_ID = ? OR COMPANY_ID = ?";
     private PreparedStatement newTraineeIdStatment = null ;
 
-    public Integer getNewTrianeeId(int oldId) throws SQLException {
-        logger.info("Looking up trainee id {}", oldId);
+    public Integer getNewTrianeeId(int oldId, int companyId) throws SQLException {
+        logger.info("Looking up trainee id {} or company id = {}", oldId, companyId);
+        Integer result = null;
         if (newTraineeIdStatment == null) {
             newTraineeIdStatment = conn.prepareStatement(GET_TRAINEE_MAP_SQL);
         }
         newTraineeIdStatment.setInt(1, oldId);
+        newTraineeIdStatment.setInt(2, companyId);
         try(ResultSet res = newTraineeIdStatment.executeQuery()) {
             if (res.next()) {
-                return res.getInt(1);
+                result = res.getInt(1);
             }
-            logger.error("Record not found for trainee id" + oldId);
-            return null;
+            else {
+                logger.error("Trainee not found with trainee id {} or for company id = {}. Creating new trainee from company name!", oldId, companyId);
+                String sql = String.format("SELECT NAME FROM COMPANY_MAP WHERE ORIG_ID = %d", companyId);
+                try (Statement stmt = conn.createStatement()){
+                    ResultSet rs = stmt.executeQuery(sql);
+                    if (rs.next()){
+                        String name = rs.getString(1);
+                        String[] n = name.split(" ");
+                        Trainee trainee = new Trainee(n[0], n[1], companyId);
+                        result = dbConnection.saveTrainee(trainee, this);
+                        trainee.setId(result);
+                        addTrainee(trainee);
+                    }
+                }
+            }
         }
+        return result;
     }
 
     private static final String GET_COMAPNY_ID_BY_NAME_SQL = "SELECT ID FROM COMPANY_MAP WHERE LOWER(NAME) = ?";
@@ -239,7 +259,7 @@ public class Lookups {
         putCourseInsStatment.executeUpdate();
     }
 
-    private static final String PUT_ATTENDEE_MAP_SQL = "INSERT INTO ATTENDEE_MAP (ID, ORIG_ID, DELEGATE_ID, COURSE_ID, PASSED, THEORY, PRACTICAL_FAULTS, FAIL_REASON, FURTHER_TRAINING) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private static final String PUT_ATTENDEE_MAP_SQL = "INSERT INTO ATTENDEE_MAP (ID, ORIG_ID, DELEGATE_ID, COMPANY_ID, COURSE_ID, PASSED, THEORY, PRACTICAL_FAULTS, FAIL_REASON, FURTHER_TRAINING) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private PreparedStatement putAttendeeStatment = null ;
 
     public void addAttendee(Attendants attendee) throws SQLException {
@@ -250,25 +270,26 @@ public class Lookups {
         putAttendeeStatment.setInt(1, attendee.getId());
         putAttendeeStatment.setInt(2, attendee.getOldId());
         putAttendeeStatment.setInt(3, attendee.getDelegateID());
-        putAttendeeStatment.setInt(4, attendee.getCourseID());
-        putAttendeeStatment.setBoolean(5, attendee.isPassed());
+        putAttendeeStatment.setInt(4, attendee.getCompanyId());
+        putAttendeeStatment.setInt(5, attendee.getCourseID());
+        putAttendeeStatment.setBoolean(6, attendee.isPassed());
 
         if (attendee.getTheory() == null){
-            putAttendeeStatment.setNull(6, java.sql.Types.INTEGER);
-        }
-        else {
-            putAttendeeStatment.setInt(6, attendee.getTheory());
-        }
-
-        if (attendee.getPracticalFaults() == null){
             putAttendeeStatment.setNull(7, java.sql.Types.INTEGER);
         }
         else {
-            putAttendeeStatment.setInt(7, attendee.getPracticalFaults());
+            putAttendeeStatment.setInt(7, attendee.getTheory());
         }
 
-        putAttendeeStatment.setString(8, attendee.getFailReason());
-        putAttendeeStatment.setString(9, attendee.getFurtherTraining());
+        if (attendee.getPracticalFaults() == null){
+            putAttendeeStatment.setNull(8, java.sql.Types.INTEGER);
+        }
+        else {
+            putAttendeeStatment.setInt(8, attendee.getPracticalFaults());
+        }
+
+        putAttendeeStatment.setString(9, attendee.getFailReason());
+        putAttendeeStatment.setString(10, attendee.getFurtherTraining());
         putAttendeeStatment.executeUpdate();
     }
 }

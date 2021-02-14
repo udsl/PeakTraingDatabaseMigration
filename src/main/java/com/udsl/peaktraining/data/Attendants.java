@@ -2,6 +2,7 @@ package com.udsl.peaktraining.data;
 
 import lombok.Getter;
 import lombok.ToString;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -14,9 +15,10 @@ public class Attendants {
     private static final Logger logger = LogManager.getLogger(Attendants.class.getName());
 
     private int id;
-    private int oldId;
-    private int delegateID;
-    private int courseID;
+    private int oldId;      // Original AttendentId
+    private int delegateID; // references original Trainees.DeligateId
+    private int companyId;  // Original CompanyId
+    private int courseID;   // Original course ID
     private boolean passed;
     private Integer theory;
     private Integer practicalFaults = null;
@@ -27,8 +29,9 @@ public class Attendants {
         try {
             oldId = rs.getInt("AttendantID");
             delegateID = rs.getInt("DelegateID");
+            companyId = rs.getInt("CompanyID");
             courseID = rs.getInt("CourseID");
-            passed = rs.getString("Passed").equalsIgnoreCase("y");
+            passed = StringUtils.equalsIgnoreCase(rs.getString("Passed"), "y");
 
             String theoryStr = rs.getString("Theory");
             if (theoryStr != null && theoryStr.equalsIgnoreCase("N/A")) {
@@ -56,7 +59,7 @@ public class Attendants {
                 furtherTraining = furtherTrainingStr;
             }
         } catch (SQLException e) {
-            logger.error("Exception creating company - {}", e.getMessage());
+            logger.error("Exception creating Attendants - {}", e.getMessage());
         }
     }
 

@@ -20,6 +20,8 @@ public class Trainee {
     private String forename;
     private String surname;
 
+    private Trainee(){}
+
     public Trainee(ResultSet rs) {
         try {
             oldId = rs.getInt("DelegateId");
@@ -29,6 +31,12 @@ public class Trainee {
         } catch (SQLException e) {
             logger.error("Exception creating Trainee - {}", e.getMessage());
         }
+    }
+
+    public Trainee(String forename, String surname, int companyId){
+        this.forename = forename;
+        this.surname = surname;
+        this.companyId = companyId;
     }
 
     public void setId(int id) {

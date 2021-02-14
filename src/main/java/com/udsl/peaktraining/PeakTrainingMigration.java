@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -48,6 +49,8 @@ public class PeakTrainingMigration implements ApplicationContextAware {
         this.context = ctx;
     }
 
+    private List<Integer> undefinedCourses = new ArrayList<>();
+
     void runMigration() throws SQLException {
         try {
             dbConnection.openConnection();
@@ -61,6 +64,7 @@ public class PeakTrainingMigration implements ApplicationContextAware {
             }
             courseMigration.doMigration();
             dbConnection.closeConnection();
+            logger.info("Total of {} course reference found with no course defined in access.", undefinedCourses.size());
             logger.info("END!");
             SpringApplication.exit(context, () -> 0);
         }
@@ -78,138 +82,162 @@ public class PeakTrainingMigration implements ApplicationContextAware {
         }
     }
 
-    private void processAttendants() throws SQLException {
-        logger.debug("Processing {} Attendants records", getRecordCount("Attendants"));
-        String sql = "SELECT [AttendantID], [CourseID], [DelegateID], [Passed], [Theory] [PracticalFaults], [FailReason], [FurtherTraining]  FROM [Attendants]";
-        try (ResultSet rs = mAccess.excuteSQL(sql)) {
-            while (rs.next()) {
-                if (rs.getInt("DelegateID")==0){
-                    errorsLogger.debug("Attendants record fond with DelegateID = 0, skipping - {}", dbConnection.resultsetFieldsAndValuesToString(rs));
-                }
-                else if (lookups.getMappedCourseInsId(rs.getInt("CourseID")) < 0){
-                    errorsLogger.debug("Attendants record found with invalid CourseID, skipping - {}", dbConnection.resultsetFieldsAndValuesToString(rs));
-                }
-                else if (rs.getString("Passed") == null){
-                    errorsLogger.debug("Attendants record found with no result data, skipping - {}", dbConnection.resultsetFieldsAndValuesToString(rs));
-                }
-                else if (lookups.getNewTrianeeId(rs.getInt("DelegateID")) < 0){
-                    errorsLogger.debug("Attendants record found with invalid DelegateID, skipping - {}", dbConnection.resultsetFieldsAndValuesToString(rs));
-                }
-                else {
-                    Attendants attendee = new Attendants(rs);
-                    logger.debug("Created attendee {}", attendee);
-                    int attendeeId = dbConnection.saveAttendee(attendee, lookups);
-                    attendee.setId(attendeeId);
-                    lookups.addAttendee(attendee);
-                    dbConnection.saveResults(attendee, lookups);
+    private void processAttendants() {
+        try {
+            logger.debug("Processing {} Attendants records", getRecordCount("Attendants"));
+            String sql = "SELECT [AttendantID], [CourseID], [CompanyID], [DelegateID], [Passed], [Theory] [PracticalFaults], [FailReason], [FurtherTraining]  FROM [Attendants]";
+            try (ResultSet rs = mAccess.excuteSQL(sql)) {
+                while (rs.next()) {
+                    int courseId = rs.getInt("CourseID");
+                    if (courseExists(courseId)) {
+                        int delegateId = rs.getInt("DelegateID");
+                        int companyId = rs.getInt("CompanyID");
+                        if (lookups.getMappedCourseInsId(courseId) < 0) {
+                            errorsLogger.debug("Attendants record found with invalid CourseID {}", courseId);
+                        } else if (lookups.getNewTrianeeId(delegateId, companyId) < 0) {
+                            errorsLogger.debug("Attendants record found with DelegateID {} or CompanyId {}", delegateId, companyId);
+                        } else {
+                            Attendants attendee = new Attendants(rs);
+                            logger.debug("Created attendee {}", attendee);
+                            int attendeeId = dbConnection.saveAttendee(attendee, lookups);
+                            attendee.setId(attendeeId);
+                            lookups.addAttendee(attendee);
+                            dbConnection.saveResults(attendee, lookups);
+                        }
+                    }
                 }
             }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
     }
 
-    private void createCourseInst() throws SQLException {
-        logger.debug("Processing {} BookedCourses records", getRecordCount("BookedCourses"));
-        String sql = "SELECT [courseId], [TemplateCourseID], [CourseTemplateName], [CourseReference], [trainerID], [CourseVenue], [CourseStartDate], [CourseEndDate], [Examiner] FROM [BookedCourses]";
-        try (ResultSet rs = mAccess.excuteSQL(sql)) {
-            while (rs.next()) {
-                CourseIns courseIns = new CourseIns(rs);
-                int courseId = dbConnection.saveCourseIns(courseIns, lookups);
-                courseIns.setId(courseId);
-                lookups.addCourseIns(courseIns);
+    private boolean courseExists(int id){
+        String sql = String.format("SELECT count(*) FROM [BookedCourses] WHERE CourseId = %d", id);
+        try (ResultSet rs = mAccess.excuteSQL(sql)){
+            if (rs.next()) {
+                if (rs.getInt(1) != 1){
+                    addToUndefinedCourses(id);
+                    return false;
+                }
             }
+        }
+        catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+        return false;
+    }
+
+    private void addToUndefinedCourses(int id){
+        logger.info("Course with ID {} not defined in access DB", id);
+        undefinedCourses.add(id);
+    }
+
+    private void createCourseInst() {
+        try {
+            logger.debug("Processing {} BookedCourses records", getRecordCount("BookedCourses"));
+            String sql = "SELECT [courseId], [TemplateCourseID], [CourseTemplateName], [CourseReference], [trainerID], [CourseVenue], [CourseStartDate], [CourseEndDate], [Examiner] FROM [BookedCourses]";
+            try (ResultSet rs = mAccess.excuteSQL(sql)) {
+                while (rs.next()) {
+                    CourseIns courseIns = new CourseIns(rs);
+                    int courseId = dbConnection.saveCourseIns(courseIns, lookups);
+                    courseIns.setId(courseId);
+                    lookups.addCourseIns(courseIns);
+                }
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
     }
 
 
-    private void updateCourseDef() throws SQLException {
-        logger.debug("Updating course definitions with next instance number");
-        List<Integer> courseIds = lookups.getCourseDefIds();
-        dbConnection.updateCourseDef(courseIds);
-    }
-
-    private void createCourseDef() throws SQLException {
-        logger.debug("Processing {} courses records", getRecordCount("courses"));
-        String sql = "SELECT [courseID], [Coursetitle], [certificatePrefix], [certificateCount] FROM [courses]";
-        try (ResultSet rs = mAccess.excuteSQL(sql)) {
-            while (rs.next()) {
-                Course course = new Course(rs);
-                int courseId = dbConnection.saveCourse(course);
-                course.setId(courseId);
-                lookups.addCourse(course);
-            }
+    private void updateCourseDef() {
+        try {
+            logger.debug("Updating course definitions with next instance number");
+            List<Integer> courseIds = lookups.getCourseDefIds();
+            dbConnection.updateCourseDef(courseIds);
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
     }
 
-    void createCompanys() throws SQLException {
-        logger.debug("Processing {} CompanySelfSponsored records", getRecordCount("CompanySelfSponsored"));
-        String sql = "SELECT [companyID], [name], [address1], [address2], [address3], [address4], [postcode], [contact], [telephone], [email], [mobile] FROM [CompanySelfSponsored] ORDER BY [name]";
-        try (ResultSet rs = mAccess.excuteSQL(sql)) {
-            while (rs.next()) {
-                String name = rs.getString("name");
-                logger.info("Processing '{}'", name);
-                if (Arrays.asList(knowDuplicates).contains(name)) {
-                    logger.info("Known duplicate '{}' found - checking to see if already added", name);
+    private void createCourseDef() {
+        try {
+            logger.debug("Processing {} courses records", getRecordCount("courses"));
+            String sql = "SELECT [courseID], [Coursetitle], [certificatePrefix], [certificateCount] FROM [courses]";
+            try (ResultSet rs = mAccess.excuteSQL(sql)) {
+                while (rs.next()) {
+                    Course course = new Course(rs);
+                    int courseId = dbConnection.saveCourse(course);
+                    course.setId(courseId);
+                    lookups.addCourse(course);
+                }
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+    }
+
+    void createCompanys() {
+        try {
+            logger.debug("Processing {} CompanySelfSponsored records", getRecordCount("CompanySelfSponsored"));
+            String sql = "SELECT [companyID], [name], [address1], [address2], [address3], [address4], [postcode], [contact], [telephone], [email], [mobile] FROM [CompanySelfSponsored] ORDER BY [name]";
+            try (ResultSet rs = mAccess.excuteSQL(sql)) {
+                while (rs.next()) {
+                    String name = rs.getString("name");
+                    logger.info("Processing '{}'", name);
+                    if (Arrays.asList(knowDuplicates).contains(name)) {
+                        logger.info("Known duplicate '{}' found - checking to see if already added", name);
+                        try {
+                            int newId = lookups.getCompanyNewIdByName(name);
+                            logger.info("Already added");
+                            // Already added, save the ID and carry on
+                            int duplicateCoID = rs.getInt("companyID");
+                            lookups.addDupCoId(duplicateCoID, newId);
+                            logger.info("Old ID {} maping to {} which is duplicate of id {}", duplicateCoID, newId, name);
+                            continue;
+                        } catch (Exception e) {
+                            logger.error("Exception looking up company name", e);
+                        }
+                    }
+                    Company company = new Company(rs);
+                    int id = dbConnection.saveCompany(company);
+                    company.setId(id);
+                    lookups.addCo(company);
+                    logger.info("Company created - {}", company.toString());
                     try {
-                        int newId = lookups.getCompanyNewIdByName(name);
-                        logger.info("Already added");
-                        // Already added, save the ID and carry on
-                        int duplicateCoID = rs.getInt("companyID");
-                        lookups.addDupCoId(duplicateCoID, newId);
-                        logger.info("Old ID {} maping to {} which is duplicate of id {}", duplicateCoID, newId, name);
-                        continue;
-                    }
-                    catch (Exception e) {
-                        logger.error("Exception looking up company name", e);
+                        Contact contact = new Contact(id, rs);
+                        int contactId = dbConnection.saveContact(contact);
+                        logger.info("Contact created - {}", contact.toString());
+                    } catch (DataException e) {
+                        logger.error("Contact not created!");
                     }
                 }
-                Company company = new Company(rs);
-                int id = dbConnection.saveCompany(company);
-                company.setId(id);
-                lookups.addCo(company);
-                logger.info("Company created - {}", company.toString());
-                try {
-                    Contact contact = new Contact(id, rs);
-                    int contactId = dbConnection.saveContact(contact);
-                    logger.info("Contact created - {}", contact.toString());
-                } catch (DataException e) {
-                    logger.error("Contact not created!");
-                }
+                logger.info("While was false!");
+            } catch (Exception e) {
+                logger.error("Exception!", e);
             }
-            logger.info("While was false!");
-        }
-        catch(Exception e){
-            logger.error("Exception!", e);
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
     }
 
-    void createTrainees() throws SQLException {
-        logger.debug("Processing {} trainees records", getRecordCount("trainees"));
-        String sql = "SELECT [DelegateId], [companyID], [DelegateFirstName], [DelegateSurname] FROM [trainees]";
-        try (ResultSet rs = mAccess.excuteSQL(sql)) {
-            while (rs.next()) {
-                Trainee trainee = new Trainee(rs);
-                int traineeId = dbConnection.saveTrainee(trainee, lookups);
-                trainee.setId(traineeId);
-                logger.info("Trainee created - {}", trainee.toString());
-                lookups.addTrainee(trainee);
+    void createTrainees(){
+        try {
+            logger.debug("Processing {} trainees records", getRecordCount("trainees"));
+            String sql = "SELECT [DelegateId], [companyID], [DelegateFirstName], [DelegateSurname] FROM [trainees]";
+            try (ResultSet rs = mAccess.excuteSQL(sql)) {
+                while (rs.next()) {
+                    Trainee trainee = new Trainee(rs);
+                    int traineeId = dbConnection.saveTrainee(trainee, lookups);
+                    trainee.setId(traineeId);
+                    logger.info("Trainee created - {}", trainee.toString());
+                    lookups.addTrainee(trainee);
+                }
             }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
-    }
-
-    String getSigFileName( String name){
-        if ("THOMAS HARDY".equals(name)){
-            return "thomas-hardy-sig.jpg";
-        }
-        else if ("DAVE HARDY".equals(name)){
-            return "dave-hardy-sig.jpg";
-        }
-        else if ("MICK HUMPHRY".equals(name)){
-            return "mick-sig.jpg";
-        }
-        else {
-            return "blank-sig.jpg";
-        }
-
     }
 
 }

@@ -2,11 +2,11 @@ package com.udsl.peaktraining;
 
 import com.udsl.peaktraining.data.BookedCoursesContent;
 import com.udsl.peaktraining.data.BookedCoursesRecord;
-import com.udsl.peaktraining.data.CourseIns;
 import com.udsl.peaktraining.data.CourseInsRecord;
 import com.udsl.peaktraining.db.DbConnection;
 import com.udsl.peaktraining.db.H2Connection;
 import com.udsl.peaktraining.db.MSAccess;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,10 +15,7 @@ import org.springframework.stereotype.Component;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -57,17 +54,17 @@ public class BookedCourseMigration {
                  logger.info("BookedCoursesContent verified against postgres db.");
                  if (migratePopulateBookedCourseContent()) {
                      logger.info("BookedCoursesContent populated.");
-                     if (completeMigration()){
-                         logger.info("Migration of courses complete!");
+                     if (updateBookedCourses()){
+                         logger.info("Booked courses updated.");
                      }
                  }
              }
         }
     }
 
-    private boolean completeMigration(){
+    private boolean updateBookedCourses(){
         for (BookedCoursesContent record: bookedCoursesContentList) {
-             int idToUpdate = record.getMappedCourseId();
+            int idToUpdate = record.getMappedCourseId();
             try {
                 postgres.updateCourseInsRecord (idToUpdate, record.getModel(), record.getCapacity(), record.getAttachment(), record.getEquipment(), record.getCourseElements());
             } catch (SQLException throwables) {
@@ -153,7 +150,12 @@ public class BookedCourseMigration {
             }
             else{
                 // free text
-                content.addCourseElement(value + ": " + inputtedValue);
+                if (!StringUtils.equals(value, inputtedValue)){
+                    content.addCourseElement(inputtedValue);
+                }
+                else {
+                    content.addCourseElement(value + ": " + inputtedValue);
+                }
             }
         } while (rs.next()) ;
     }
