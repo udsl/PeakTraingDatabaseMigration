@@ -21,7 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @Component
-public class PeakTrainingMigration implements ApplicationContextAware {
+public class PeakTrainingMigration {
     private static final Logger logger = LogManager.getLogger(PeakTrainingMigration.class.getName());
     private static final Logger errorsLogger = LogManager.getLogger("errors-log");
 
@@ -43,11 +43,6 @@ public class PeakTrainingMigration implements ApplicationContextAware {
 
     @Value("${fullMigration}")
     private boolean fullMigration;
-
-    @Override
-    public void setApplicationContext(ApplicationContext ctx) throws BeansException {
-        this.context = ctx;
-    }
 
     private List<Integer> undefinedCourses = new ArrayList<>();
 
@@ -252,5 +247,4 @@ public class PeakTrainingMigration implements ApplicationContextAware {
             throwables.printStackTrace();
         }
     }
-
 }
