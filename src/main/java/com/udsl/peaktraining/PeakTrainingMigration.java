@@ -4,6 +4,7 @@ import com.udsl.DataException;
 import com.udsl.peaktraining.data.*;
 import com.udsl.peaktraining.db.DbConnection;
 import com.udsl.peaktraining.db.MSAccess;
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.BeansException;
@@ -14,6 +15,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -44,11 +49,13 @@ public class PeakTrainingMigration {
     @Value("${fullMigration}")
     private boolean fullMigration;
 
+    @Value("${traineeReportFileName}")
+    String traineeReportFileName;
+
     private List<Integer> undefinedCourses = new ArrayList<>();
 
     void runMigration() throws SQLException {
         try {
-            dbConnection.openConnection();
             if (fullMigration) {
                 createCompanys();
                 createTrainees();
@@ -58,7 +65,6 @@ public class PeakTrainingMigration {
                 processAttendants();
             }
             courseMigration.doMigration();
-            dbConnection.closeConnection();
             logger.info("Total of {} course reference found with no course defined in access.", undefinedCourses.size());
             logger.info("END!");
             SpringApplication.exit(context, () -> 0);
@@ -231,19 +237,29 @@ public class PeakTrainingMigration {
     }
 
     void createTrainees(){
-        try {
+        File reportFile;
+        reportFile = new File(traineeReportFileName);
+        try{
             logger.debug("Processing {} trainees records", getRecordCount("trainees"));
             String sql = "SELECT [DelegateId], [companyID], [DelegateFirstName], [DelegateSurname] FROM [trainees]";
+            FileUtils.writeStringToFile(reportFile,sql +"\n\n",true);
             try (ResultSet rs = mAccess.excuteSQL(sql)) {
                 while (rs.next()) {
+                    String.format("Data read: DelegateId - %d, companyID - %d, DelegateFirstName - '%s', DelegateSurname - '%s'",
+                            rs.getInt("DelegateId"),
+                            rs.getInt("companyID"),
+                            rs.getString("DelegateFirstName"),
+                            rs.getString("DelegateSurname"));
                     Trainee trainee = new Trainee(rs);
                     int traineeId = dbConnection.saveTrainee(trainee, lookups);
                     trainee.setId(traineeId);
-                    logger.info("Trainee created - {}", trainee.toString());
+                    FileUtils.writeStringToFile(reportFile,trainee.toString() +"\n",true);
                     lookups.addTrainee(trainee);
                 }
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
-        } catch (SQLException throwables) {
+        } catch(SQLException | IOException throwables) {
             throwables.printStackTrace();
         }
     }

@@ -2,16 +2,20 @@ package com.udsl.peaktraining.db;
 
 import com.udsl.peaktraining.*;
 import com.udsl.peaktraining.data.*;
+import com.udsl.peaktraining.validation.ValidationPostAttendee;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static java.lang.Math.max;
 
@@ -30,6 +34,7 @@ public class DbConnection {
 
     private Connection conn = null;
 
+    @PostConstruct
     public void openConnection() {
         try {
             String hostname = InetAddress.getLocalHost().getHostName();
@@ -69,6 +74,7 @@ public class DbConnection {
         }
     }
 
+    @PreDestroy
     public void closeConnection() throws SQLException {
         if (conn != null) {
             if (!conn.getAutoCommit()){
@@ -260,24 +266,51 @@ public class DbConnection {
         saveCourseResultsStmt.executeUpdate();
     }
 
+    private static final String CHECK_COURSE_INS_SQL = "SELECT * FROM course_ins WHERE course_ins_id = ?";
+    PreparedStatement checkCourseInsStmt = null ;
+    private boolean checkCourseRecord(int courseId) {
+        logger.info("checkCourseRecord (courseId: {})", courseId);
+        try {
+            if (checkCourseInsStmt == null) {
+                checkCourseInsStmt = conn.prepareStatement(CHECK_COURSE_INS_SQL);
+            }
+            checkCourseInsStmt.setInt(1, courseId);
+            try (ResultSet rs = checkCourseInsStmt.executeQuery()) {
+                if (rs.next()) {
+                    return true;
+                }
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            return false;
+        }
+        return false;
+    }
+
     private static final String UPDATE_COURSE_INS_SQL = "UPDATE course_ins SET model = ?, capacity = ?, attachment = ?, equipment = ?, course_elements = ?  WHERE course_ins_id = ?";
     PreparedStatement updateCourseInsStmt = null ;
     public void updateCourseInsRecord (int courseId, String model, String capacity, String attachment, String equipment, List<String> course_elements) throws SQLException {
         logger.info("updateCourseInsRecord (courseId: {}, model: {}, capacity: {}, attachment: {}, equipment: {}, course_elements: {})", courseId, model, capacity, attachment, equipment, course_elements);
-        if (updateCourseInsStmt == null) {
-            updateCourseInsStmt = conn.prepareStatement(UPDATE_COURSE_INS_SQL);
+
+        if (checkCourseRecord(courseId)) {
+            if (updateCourseInsStmt == null) {
+                updateCourseInsStmt = conn.prepareStatement(UPDATE_COURSE_INS_SQL);
+            }
+            updateCourseInsStmt.setString(1, model);
+            updateCourseInsStmt.setString(2, capacity);
+            updateCourseInsStmt.setString(3, attachment);
+            updateCourseInsStmt.setString(4, equipment);
+
+            String[] strArray = course_elements.toArray(new String[course_elements.size()]);
+            Array elementArray = conn.createArrayOf("text", strArray);
+            updateCourseInsStmt.setArray(5, elementArray);
+
+            updateCourseInsStmt.setInt(6, courseId);
+            updateCourseInsStmt.executeUpdate();
         }
-        updateCourseInsStmt.setString(1, model);
-        updateCourseInsStmt.setString(2, capacity);
-        updateCourseInsStmt.setString(3, attachment);
-        updateCourseInsStmt.setString(4, equipment);
-
-        String[] strArray = course_elements.toArray(new String[course_elements.size()]);
-        Array elementArray = conn.createArrayOf("text", strArray);
-        updateCourseInsStmt.setArray(5, elementArray);
-
-        updateCourseInsStmt.setInt(6, courseId);
-        updateCourseInsStmt.executeUpdate();
+        else{
+            logger.error("course_ins record not found to update! ");
+        }
     }
 
     private static final String GRT_COURSE_INS_SQL = "SELECT * FROM course_ins WHERE course_ins_id = ?";
@@ -344,6 +377,24 @@ public class DbConnection {
         updateCourseDefCertStmt.setInt(1, key);
         updateCourseDefCertStmt.setString(2, name);
         updateCourseDefCertStmt.executeUpdate();
+    }
+
+    private static final String GET_VALIDATION_ATTENDEE_SQL = "SELECT attendee_id, trainee_id, course_ins_id FROM attendees WHERE attendee_id = ?";
+    PreparedStatement getValidationAttendeeStmt = null ;
+    public Optional<ValidationPostAttendee> getValidationPostAttendee(int id){
+        try {
+            if (getValidationAttendeeStmt == null) {
+                getValidationAttendeeStmt = conn.prepareStatement(GET_VALIDATION_ATTENDEE_SQL);
+            }
+            getValidationAttendeeStmt.setInt(1, id);
+            ResultSet rs = getValidationAttendeeStmt.executeQuery();
+            if(rs.next()){
+                return Optional.of(new ValidationPostAttendee(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return Optional.empty();
     }
 
     private static final String GET_COURSE_DEF_NAMES_SQL = "SELECT name from course_def";

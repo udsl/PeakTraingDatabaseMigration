@@ -87,7 +87,8 @@ public class Lookups {
         if (res.next()){
             return res.getInt(1);
         }
-        throw new SQLException("Record not found!");
+        logger.error("Record not found for ", oldId);
+        return -1;
     }
 
     private static final String SAVE_TRAINEE_MAP_SQL = "INSERT INTO TRAINEE_MAP (ID, ORIG_ID, COMPANY_ID, FORENAME, SURNAME) VALUES (?, ?, ?, ?, ?)";
@@ -142,6 +143,27 @@ public class Lookups {
             }
         }
         return result;
+    }
+
+    private static final String GET_OLD_TRAINEE_ID_SQL = "SELECT ORIG_ID FROM TRAINEE_MAP WHERE ID = ?";
+    private PreparedStatement oldTraineeIdStatment = null ;
+
+    public Integer getNewTrianeeId(int oldId)  {
+        logger.info("Looking up old trainee id {}", oldId);
+        try {
+            Integer result = null;
+            if (oldTraineeIdStatment == null) {
+                oldTraineeIdStatment = conn.prepareStatement(GET_OLD_TRAINEE_ID_SQL);
+            }
+            oldTraineeIdStatment.setInt(1, oldId);
+            ResultSet res = newTraineeIdStatment.executeQuery() ;
+            if (res.next()) {
+                return res.getInt(1);
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+        return -1;
     }
 
     private static final String GET_COMAPNY_ID_BY_NAME_SQL = "SELECT ID FROM COMPANY_MAP WHERE LOWER(NAME) = ?";
@@ -208,19 +230,47 @@ public class Lookups {
     private static final String GET_NEW_COURSE_ID_SQL = "SELECT ID FROM COURSE_MAP WHERE ORIG_ID = ?";
     private PreparedStatement getNewCourseIdStatment = null ;
 
-    public int getCourseDefId(int oldId) throws SQLException {
+    public int getCourseDefId(int oldId) {
         logger.debug("Looked up CourseDef id {}", oldId);
-        if (getNewCourseIdStatment == null){
-            getNewCourseIdStatment = conn.prepareStatement(GET_NEW_COURSE_ID_SQL);
-        }
-        getNewCourseIdStatment.setInt(1, oldId);
-        try(ResultSet res = getNewCourseIdStatment.executeQuery()) {
-            if (res.next()) {
-                return res.getInt(1);
+        try {
+            if (getNewCourseIdStatment == null) {
+                getNewCourseIdStatment = conn.prepareStatement(GET_NEW_COURSE_ID_SQL);
             }
+            getNewCourseIdStatment.setInt(1, oldId);
+            try (ResultSet res = getNewCourseIdStatment.executeQuery()) {
+                if (res.next()) {
+                    return res.getInt(1);
+                }
+            }
+            logger.error("Record not found for old course id {}", oldId);
+         } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
-        throw new SQLException("Record not found for old course id" + oldId);
+        return -1;
     }
+
+    private static final String GET_OLD_COURSE_ID_SQL = "SELECT ORIG_ID FROM COURSE_MAP WHERE ID = ?";
+    private PreparedStatement getOldCourseIdStatment = null ;
+
+    public int getOrigCourseId(int id) {
+        logger.debug("Looked up CourseDef id {}", id);
+        try {
+            if (getOldCourseIdStatment == null) {
+                getOldCourseIdStatment = conn.prepareStatement(GET_OLD_COURSE_ID_SQL);
+            }
+            getOldCourseIdStatment.setInt(1, id);
+            try (ResultSet res = getOldCourseIdStatment.executeQuery()) {
+                if (res.next()) {
+                    return res.getInt(1);
+                }
+            }
+            logger.error("Record not found for old course id {}", id);
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+        return -1;
+    }
+
 
     private static final String PUT_COURSE_MAP_SQL = "INSERT INTO COURSE_MAP (ID, ORIG_ID, COURSE_TITLE, CERTIFICATE_PREFIX, CERTIFICATE_COUNT) VALUES (?, ?, ?, ?, ?)";
     private PreparedStatement putCourseStatment = null ;

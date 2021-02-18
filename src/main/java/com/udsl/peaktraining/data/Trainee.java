@@ -12,7 +12,7 @@ import java.sql.SQLException;
 @ToString
 @Getter
 public class Trainee {
-    private static final Logger logger = LogManager.getLogger(Company.class.getName());
+    private static final Logger logger = LogManager.getLogger(Trainee.class.getName());
 
     private int id;
     private int oldId;
@@ -24,6 +24,7 @@ public class Trainee {
 
     public Trainee(ResultSet rs) {
         try {
+            logger.info("Data read: DelegateId - {}, companyID - {}", rs.getInt("DelegateId"), rs.getInt("companyID"));
             oldId = rs.getInt("DelegateId");
             companyId = rs.getInt("companyID");
             forename = rs.getString("DelegateFirstName");

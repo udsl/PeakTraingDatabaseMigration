@@ -1,6 +1,7 @@
 package com.udsl.peaktraining;
 
 import com.udsl.peaktraining.data.Reporter;
+import com.udsl.peaktraining.validation.ValidationReport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,11 +20,17 @@ public class PeakTraingDataMigrationApp implements CommandLineRunner {
     @Autowired
     Reporter reporter;
 
+    @Autowired
+    ValidationReport validationReport;
+
     @Value("${migration}")
     private boolean doMigration;
 
     @Value("${reportdetails}")
     Integer reportOn;
+
+    @Value("${validationReport}")
+    boolean validationReportRequired;
 
     public static void main(String[] args) {
         SpringApplication.run(PeakTraingDataMigrationApp.class, args);
@@ -33,15 +40,18 @@ public class PeakTraingDataMigrationApp implements CommandLineRunner {
     public void run(String... args) throws Exception {
         logger.info("Peak Training data migration starting . . .");
         try {
+            // Migration and reportOn are mutuialy exclusinv
             if (doMigration) {
                 migration.runMigration();
             }
             else if (reportOn != null){
                 reporter.report(reportOn);
             }
-            else{
-                logger.error("Config error!");
+            // validation can be run with or without either of the above.
+            if (validationReportRequired){
+                validationReport.doReport();
             }
+            System.exit(0);
         } catch (Exception e) {
             logger.error("Caught exception {}", e.getMessage(), e);
         }

@@ -2,15 +2,17 @@ package com.udsl.peaktraining.data;
 
 import com.udsl.peaktraining.Lookups;
 import com.udsl.peaktraining.db.MSAccess;
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -36,13 +38,12 @@ public class Reporter {
         logger.info("Reporting on: {}", reportOn);
         // Get data from Access
         Company reportingOn = getCompany(reportOn);
-        List<Trainee> traineeList = null;
+        List<ReportTrainee> traineeList = null;
         if (reportingOn == null){
             logger.info("No commany found with ID {}", reportOn);
         }
         else{
-            // Check migration data for mapings
-            reportingOn.setId(getCoMappingId(reportOn));
+            reportingOn.setId(reportOn);
             // get company trainees
             traineeList = getTrainees(reportOn);
             if (traineeList.isEmpty() ){
@@ -54,14 +55,22 @@ public class Reporter {
                     t.setId(getTraineeMappingId(t.getOldId(), t.getCompanyId()));
                 }
             }
-            writeReport(reportingOn);
+            writeReport(reportingOn, traineeList);
         }
-
     }
 
-    private void writeReport(Company co){
+
+    private void writeReport(Company co, List<ReportTrainee> traineeList){
         clearReportFile();
         writeToReportFile(co.toString());
+        int traineeCount = 0;
+        for( ReportTrainee t: traineeList){
+            writeToReportFile( String.format("    %3d %s", ++traineeCount, t.toString()));
+            int courseCount = 0;
+            for(BookedCoursesRecord r: t.getCourseRecord()){
+                writeToReportFile( String.format("        %3d %s", ++courseCount, r.toString()));
+            }
+        }
     }
 
     private int getCoMappingId(int forCoId){
@@ -86,7 +95,7 @@ public class Reporter {
 
     private Company getCompany(int coId) {
         logger.debug("Getting company with id {}", coId);
-        String sql = "SELECT [companyID], [name], [address1], [address2], [address3], [address4], [postcode], [contact], [telephone], [email], [mobile] FROM [CompanySelfSponsored] ORDER BY [name]";
+        String sql = String.format("SELECT [companyID], [name], [address1], [address2], [address3], [address4], [postcode], [contact], [telephone], [email], [mobile] FROM [CompanySelfSponsored] WHERE [companyID] = %d", coId);
         try (ResultSet rs = mAccess.excuteSQL(sql)) {
             if (rs.next()) {
                 String name = rs.getString("name");
@@ -100,14 +109,31 @@ public class Reporter {
         return null;
     }
 
-    private List<Trainee> getTrainees(int forCo){
-        List<Trainee> traineeList = new ArrayList<>();
+    private List<ReportTrainee> getTrainees(int forCo){
+        List<ReportTrainee> traineeList = new ArrayList<>();
         try {
             logger.debug("getting trainees for {}", forCo);
             String sql = String.format("SELECT [DelegateId], [companyID], [DelegateFirstName], [DelegateSurname] FROM [trainees] WHERE [companyID] = %d", forCo);
             try (ResultSet rs = mAccess.excuteSQL(sql)) {
                 while (rs.next()) {
-                    Trainee trainee = new Trainee(rs);
+                    ReportTrainee trainee = new ReportTrainee(rs);
+                    // Now get the courses this Trainee has attended
+                    // First get the Attendants IDs
+                    String attendantsSql = String.format("SELECT [AttendantID], [CourseID], [CompanyID], [DelegateID], [Passed], [Theory] [PracticalFaults], [FailReason], [FurtherTraining]  FROM [Attendants] WHERE [DelegateID] = %d", trainee.getOldId());
+                    try (ResultSet attendantsRs = mAccess.excuteSQL(attendantsSql)){
+                        while (attendantsRs.next()) {
+                            Attendants attendee = new Attendants(attendantsRs);
+                            logger.info("Getting course data attended, courseId {}", attendee.getCourseID());
+                            String bookedSql = String.format("SELECT [courseId], [TemplateCourseID], [CourseTemplateName], [CourseReference], [trainerID], [CourseVenue], [CourseStartDate], [CourseEndDate], [Examiner] FROM [BookedCourses] WHERE [courseId] = %d", attendee.getCourseID() );
+                            try (ResultSet bookedRs = mAccess.excuteSQL(bookedSql)) {
+                                while (bookedRs.next()) {
+                                    BookedCoursesRecord course = new BookedCoursesRecord(bookedRs);
+                                    course.setCourseId(lookups.getCourseDefId(course.getCourseId()));
+                                    trainee.addCourseRecord(course);
+                                }
+                            }
+                        }
+                    }
                     traineeList.add(trainee);
                 }
             }
@@ -117,22 +143,22 @@ public class Reporter {
         return traineeList;
     }
 
+    File file;
+
     void clearReportFile() {
         try {
-            String header = String.format("Report on Comapny ID %d\n\n", reportOn);
-            BufferedWriter writer = new BufferedWriter(new FileWriter(reportFileName, true));
-            writer.append(header);
-            writer.close();
-    } catch (IOException e) {
-        e.printStackTrace();
+            Path path = Paths.get(reportFileName);
+            String header = String.format("Report on Company ID %d\n\n", reportOn);
+            file = new File(reportFileName);
+            FileUtils.writeStringToFile(file, header);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-}
 
     void writeToReportFile(String str){
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(reportFileName, true));
-            writer.append(str + "\n");
-            writer.close();
+            FileUtils.writeStringToFile(file, str + "\n", true);
         } catch (IOException e) {
             e.printStackTrace();
         }

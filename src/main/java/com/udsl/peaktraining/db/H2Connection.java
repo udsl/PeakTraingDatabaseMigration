@@ -16,7 +16,7 @@ import java.sql.Statement;
 public class H2Connection {
     private static final Logger logger = LogManager.getLogger(H2Connection.class.getName());
 
-    private JdbcDataSource ds = new JdbcDataSource();
+    private JdbcDataSource ds ;
 
     private Connection conn;
     private Server h2Server = null;
