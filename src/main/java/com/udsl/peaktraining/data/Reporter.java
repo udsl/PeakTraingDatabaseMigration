@@ -84,13 +84,7 @@ public class Reporter {
     }
 
     private int getTraineeMappingId(int forOldTraineeId, int forCoId){
-        try {
-            return lookups.getNewTrianeeId(forOldTraineeId, forCoId);
-            // get company trainees
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
-        return -1;
+        return lookups.getNewTrianeeId(forOldTraineeId, forCoId);
     }
 
     private Company getCompany(int coId) {

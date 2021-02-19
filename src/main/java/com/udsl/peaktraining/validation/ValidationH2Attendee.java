@@ -7,6 +7,7 @@ import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -27,6 +28,8 @@ public class ValidationH2Attendee {
     private String failReason = "";
     private String furtherTraining = "";
 
+    private String validationResult;
+
     public ValidationH2Attendee(ResultSet rs){
         try {
             id = rs.getInt("ID");
@@ -45,16 +48,52 @@ public class ValidationH2Attendee {
         }
     }
 
-    public boolean validate(ValidationPostAttendee validationPostAttendee, Lookups lookup){
+    public boolean validate(ValidationPostAttendee validationPostAttendee, Lookups lookup, ValidationAccessUtilities util){
+        int accessTraineeId = util.getTraineeIdFromDeligateId(delegateID);
+        int newTraineeId = lookup.getNewTrianeeId(accessTraineeId, 0);
+        int oldTraneeId = lookup.getOldTraineeId(validationPostAttendee.getTraineeId());
+        int mappedOrigCourseId = lookup.getOrigCourseId(validationPostAttendee.getCourseId());
+        int newCourseIdMapped = lookup.getMappedCourseInsId(courseID);
+
         boolean result = validationPostAttendee.getAttendentId() == id &&
-               lookup.getOrigCourseId(validationPostAttendee.getCourseId()) ==  courseID &&
-               validationPostAttendee.getTraineeId() == lookup.getNewTrianeeId(delegateID);
+               // lookup the original ID from the postgres ID should be the H2 id
+                mappedOrigCourseId ==  courseID &&
+               // postgres course id point to the course_ins_id
+               validationPostAttendee.getCourseId() == newCourseIdMapped &&
+               // trainee ID should be the trainee id of the delegate
+               // we have the delegate id so now look up the trainee in access and get the mapped id.
+
+               validationPostAttendee.getTraineeId() == newTraineeId;
+
+        validationResult = String.format("Validation (Postgres): id (%d = %d), " +
+                        "courseID (%d -> %d = %d -> %d), " +
+                        "traineeID (%d -> %d = %d  -> (access trainee)%d -> (delegate)%d)",
+                validationPostAttendee.getAttendentId(), id, // ID
+                validationPostAttendee.getCourseId(), mappedOrigCourseId , courseID, newCourseIdMapped, // CourseId
+                validationPostAttendee.getTraineeId(), oldTraneeId, delegateID, accessTraineeId, newTraineeId); // deligate id
+
         if (result){
             logger.info("Validation good");
         }
         else{
-            logger.info("Validation fails: id ({} = {}), courseID ({} = {}), delegateID ({} = {})",
-                    validationPostAttendee.getAttendentId(),id, validationPostAttendee.getCourseId(), courseID, validationPostAttendee.getTraineeId(), delegateID);
+            logger.info("Validation failed");
+            validationResult = String.format("FAILED - %s", validationResult);
+        }
+        return result;
+    }
+
+    public boolean validate(ValidationAccessAttendee accessAttendee){
+        boolean result = accessAttendee.getAttendantID() == oldId &&
+                accessAttendee.getCourseID() ==  courseID &&
+                accessAttendee.getDelegateID() == delegateID;
+        validationResult = String.format("Validation (Access): id (%d = %d), courseID (%d = %d), delegateID (%d = %d)",
+                accessAttendee.getAttendantID(), id, accessAttendee.getCourseID(), courseID, accessAttendee.getDelegateID(), delegateID);
+        if (result){
+            logger.info("Validation good");
+        }
+        else{
+            logger.info("Validation failed");
+            validationResult = String.format("FAILED - %s", validationResult);
         }
         return result;
     }

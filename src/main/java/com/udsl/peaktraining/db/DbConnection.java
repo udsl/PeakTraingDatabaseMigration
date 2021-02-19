@@ -3,6 +3,7 @@ package com.udsl.peaktraining.db;
 import com.udsl.peaktraining.*;
 import com.udsl.peaktraining.data.*;
 import com.udsl.peaktraining.validation.ValidationPostAttendee;
+import com.udsl.peaktraining.validation.ValidationPostCourse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
@@ -390,6 +391,24 @@ public class DbConnection {
             ResultSet rs = getValidationAttendeeStmt.executeQuery();
             if(rs.next()){
                 return Optional.of(new ValidationPostAttendee(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return Optional.empty();
+    }
+
+    private static final String GET_VALIDATION_COURSE_SQL = "SELECT * FROM course_ins WHERE course_ins_id = ?";
+    PreparedStatement getValidationCourseStmt = null ;
+    public Optional<ValidationPostCourse> getValidationPostCourse(int id){
+        try {
+            if (getValidationCourseStmt == null) {
+                getValidationCourseStmt = conn.prepareStatement(GET_VALIDATION_COURSE_SQL);
+            }
+            getValidationCourseStmt.setInt(1, id);
+            ResultSet rs = getValidationCourseStmt.executeQuery();
+            if(rs.next()){
+                return Optional.of(new ValidationPostCourse(rs));
             }
         } catch (SQLException e) {
             e.printStackTrace();
