@@ -111,14 +111,12 @@ public class Lookups {
         }
     }
 
-    private static final String GET_TRAINEE_MAP_SQL = "SELECT ID FROM TRAINEE_MAP WHERE ORIG_ID = ? OR COMPANY_ID = ?";
+    private static final String GET_TRAINEE_MAP_SQL = "SELECT ID FROM TRAINEE_MAP WHERE ORIG_ID = ? AND COMPANY_ID = ?";
     private PreparedStatement newTraineeIdStatment = null ;
 
     public int getNewTrianeeId(int oldId, int companyId) {
         int result = -1;
         try {
-            logger.info("Looking up trainee id {} or company id = {}", oldId, companyId);
-
             if (newTraineeIdStatment == null) {
                 newTraineeIdStatment = conn.prepareStatement(GET_TRAINEE_MAP_SQL);
             }
@@ -135,7 +133,9 @@ public class Lookups {
                         if (rs.next()) {
                             String name = rs.getString(1);
                             String[] n = name.split(" ");
-                            Trainee trainee = new Trainee(n[0], n[1], companyId);
+                            String forename = n[0] ;
+                            String surname = n.length > 1 ? n[1] : "";
+                            Trainee trainee = new Trainee(forename, surname, companyId);
                             result = dbConnection.saveTrainee(trainee, this);
                             trainee.setId(result);
                             addTrainee(trainee);
@@ -146,6 +146,8 @@ public class Lookups {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
+        logger.info("Looked up trainee id {} AND company id = {} found {}", oldId, companyId, result);
+
         return result;
     }
 
@@ -224,7 +226,6 @@ public class Lookups {
     public int getMappedCourseInsId(int oldId) {
         int courseInsId = -1;
         try {
-            logger.info("Looked up courseInsId {}", oldId);
             if (getIdCourseInsStatment == null) {
                 getIdCourseInsStatment = conn.prepareStatement(GET_ID_COURSE_INS_SQL);
             }
@@ -236,12 +237,10 @@ public class Lookups {
                     logger.debug("courseIns not found for id {}", oldId);
                 }
             }
-
-            logger.info("Returning courseInsId {}", courseInsId);
-            return courseInsId;
-        } catch (SQLException throwables) {
+         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
+        logger.info("Looked up courseInsId {} - returning {}", oldId, courseInsId);
         return courseInsId;
     }
 

@@ -213,9 +213,10 @@ public class DbConnection {
         if (saveAttendeeStmt == null) {
             saveAttendeeStmt = conn.prepareStatement(SAVE_ATTENDEE_SQL, Statement.RETURN_GENERATED_KEYS);
         }
-        saveAttendeeStmt.setInt(1, lookups.getNewTrianeeId(attendee.getDelegateID(), attendee.getCompanyId()));
-        saveAttendeeStmt.setInt(2, lookups.getMappedCourseInsId(attendee.getCourseID()));
-
+        int mappedTranee = lookups.getNewTrianeeId(attendee.getDelegateID(), attendee.getCompanyId());
+        int mappedCourse = lookups.getMappedCourseInsId(attendee.getCourseID());
+        saveAttendeeStmt.setInt(1, mappedTranee);
+        saveAttendeeStmt.setInt(2, mappedCourse);
         int inserted = saveAttendeeStmt.executeUpdate();
         if (inserted == 1) {
             ResultSet rs = saveAttendeeStmt.getGeneratedKeys();
@@ -224,6 +225,7 @@ public class DbConnection {
                 logger.info("Auto Generated Attendee Primary Key {}", generatedkey);
             }
         }
+        logger.info("Inserted ID {}, attendee {}, course {}", generatedkey, mappedTranee, mappedCourse);
         return generatedkey;
     }
 

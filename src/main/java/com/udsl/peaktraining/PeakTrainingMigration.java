@@ -4,6 +4,8 @@ import com.udsl.DataException;
 import com.udsl.peaktraining.data.*;
 import com.udsl.peaktraining.db.DbConnection;
 import com.udsl.peaktraining.db.MSAccess;
+import com.udsl.peaktraining.migration.AttendeeMigration;
+import com.udsl.peaktraining.migration.MigrationUtilities;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,7 +30,6 @@ import java.util.List;
 @Component
 public class PeakTrainingMigration {
     private static final Logger logger = LogManager.getLogger(PeakTrainingMigration.class.getName());
-    private static final Logger errorsLogger = LogManager.getLogger("errors-log");
 
     private ApplicationContext context;
 
@@ -46,13 +47,17 @@ public class PeakTrainingMigration {
     @Autowired
     private BookedCourseMigration courseMigration;
 
+    @Autowired
+    MigrationUtilities migrationUtil;
+
+    @Autowired
+    AttendeeMigration attendeeMigration;
+
     @Value("${fullMigration}")
     private boolean fullMigration;
 
     @Value("${traineeReportFileName}")
     String traineeReportFileName;
-
-    private List<Integer> undefinedCourses = new ArrayList<>();
 
     void runMigration() throws SQLException {
         try {
@@ -62,94 +67,20 @@ public class PeakTrainingMigration {
                 createCourseDef();
                 createCourseInst();
                 updateCourseDef();
-                processAttendants();
+                attendeeMigration.processAttendants();
             }
             courseMigration.doMigration();
-            logger.info("Total of {} course reference found with no course defined in access.", undefinedCourses.size());
             logger.info("END!");
-            SpringApplication.exit(context, () -> 0);
+            System.exit(0);
         }
         finally {
             dbConnection.closeConnection();
         }
     }
 
-    private static final String COUNT_QUERY_SQL = "select count(*) from [?]";
-
-    private int getRecordCount(String tableName) throws SQLException {
-        try (ResultSet rsCount = mAccess.excuteSQL(COUNT_QUERY_SQL.replace("?", tableName))) {
-            rsCount.next();
-            int count = rsCount.getInt(1);
-            logger.info("Table {} has {} records.", tableName, count);
-            return count;
-        }
-    }
-
-    private void processAttendants() {
-        int toProcess = 0;
-        int processed = 0;
-        try {
-            toProcess = getRecordCount("Attendants");
-            logger.debug("Processing {} Attendants records", toProcess);
-            String sql = "SELECT [AttendantID], [CourseID], [CompanyID], [DelegateID], [Passed], [Theory] [PracticalFaults], [FailReason], [FurtherTraining]  FROM [Attendants]";
-            try (ResultSet rs = mAccess.excuteSQL(sql)) {
-                while (rs.next()) {
-                    int courseId = rs.getInt("CourseID");
-                    processed = processed + 1 ;
-                    if (courseExists(courseId)) {
-                        int delegateId = rs.getInt("DelegateID");
-                        int companyId = rs.getInt("CompanyID");
-                        if (lookups.getMappedCourseInsId(courseId) < 0) {
-                            errorsLogger.debug("Attendants record found with invalid CourseID {}", courseId);
-                        } else if (lookups.getNewTrianeeId(delegateId, companyId) < 0) {
-                            errorsLogger.debug("Attendants record found with DelegateID {} or CompanyId {}", delegateId, companyId);
-                        } else {
-                            Attendants attendee = new Attendants(rs);
-                            logger.debug("Created attendee {}", attendee);
-                            int attendeeId = dbConnection.saveAttendee(attendee, lookups);
-                            attendee.setId(attendeeId);
-                            lookups.addAttendee(attendee);
-                            dbConnection.saveResults(attendee, lookups);
-                        }
-                    }
-                }
-            }
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
-        if (toProcess != processed){
-            throw new RuntimeException("Procesing count error.");
-        }
-    }
-
-    private boolean courseExists(int id){
-        String sql = String.format("SELECT count(*) FROM [BookedCourses] WHERE [CourseId] = %d", id);
-        try (ResultSet rs = mAccess.excuteSQL(sql)){
-            if (rs.next()) {
-                int v = rs.getInt(1);
-                if (v != 1){
-                    addToUndefinedCourses(id);
-                    return false;
-                }
-                else{
-                    return true;
-                }
-            }
-        }
-        catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
-        return false;
-    }
-
-    private void addToUndefinedCourses(int id){
-        logger.info("Course with ID {} not defined in access DB", id);
-        undefinedCourses.add(id);
-    }
-
     private void createCourseInst() {
         try {
-            logger.debug("Processing {} BookedCourses records", getRecordCount("BookedCourses"));
+            logger.debug("Processing {} BookedCourses records", migrationUtil.getRecordCount("BookedCourses"));
             String sql = "SELECT [courseId], [TemplateCourseID], [CourseTemplateName], [CourseReference], [trainerID], [CourseVenue], [CourseStartDate], [CourseEndDate], [Examiner] FROM [BookedCourses]";
             try (ResultSet rs = mAccess.excuteSQL(sql)) {
                 while (rs.next()) {
@@ -164,7 +95,6 @@ public class PeakTrainingMigration {
         }
     }
 
-
     private void updateCourseDef() {
         try {
             logger.debug("Updating course definitions with next instance number");
@@ -177,7 +107,7 @@ public class PeakTrainingMigration {
 
     private void createCourseDef() {
         try {
-            logger.debug("Processing {} courses records", getRecordCount("courses"));
+            logger.debug("Processing {} courses records", migrationUtil.getRecordCount("courses"));
             String sql = "SELECT [courseID], [Coursetitle], [certificatePrefix], [certificateCount] FROM [courses]";
             try (ResultSet rs = mAccess.excuteSQL(sql)) {
                 while (rs.next()) {
@@ -194,7 +124,7 @@ public class PeakTrainingMigration {
 
     void createCompanys() {
         try {
-            logger.debug("Processing {} CompanySelfSponsored records", getRecordCount("CompanySelfSponsored"));
+            logger.debug("Processing {} CompanySelfSponsored records", migrationUtil.getRecordCount("CompanySelfSponsored"));
             String sql = "SELECT [companyID], [name], [address1], [address2], [address3], [address4], [postcode], [contact], [telephone], [email], [mobile] FROM [CompanySelfSponsored] ORDER BY [name]";
             try (ResultSet rs = mAccess.excuteSQL(sql)) {
                 while (rs.next()) {
@@ -240,7 +170,7 @@ public class PeakTrainingMigration {
         File reportFile;
         reportFile = new File(traineeReportFileName);
         try{
-            logger.debug("Processing {} trainees records", getRecordCount("trainees"));
+            logger.debug("Processing {} trainees records", migrationUtil.getRecordCount("trainees"));
             String sql = "SELECT [DelegateId], [companyID], [DelegateFirstName], [DelegateSurname] FROM [trainees]";
             FileUtils.writeStringToFile(reportFile,sql +"\n\n",true);
             try (ResultSet rs = mAccess.excuteSQL(sql)) {
