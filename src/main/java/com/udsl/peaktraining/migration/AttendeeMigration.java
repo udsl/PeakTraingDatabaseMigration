@@ -48,7 +48,7 @@ public class AttendeeMigration {
                         int companyId = rs.getInt("CompanyID");
                         if (lookups.getMappedCourseInsId(courseId) < 0) {
                             logger.debug("Attendants record found with invalid CourseID {}", courseId);
-                        } else if (lookups.getNewTrianeeId(delegateId, companyId) < 0) {
+                        } else if (lookups.getNewTrianeeId(delegateId) < 0) {
                             logger.debug("Attendants record found with DelegateID {} or CompanyId {}", delegateId, companyId);
                         } else {
                             Attendants attendee = new Attendants(rs);

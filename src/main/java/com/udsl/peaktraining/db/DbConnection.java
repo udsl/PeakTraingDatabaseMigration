@@ -213,7 +213,7 @@ public class DbConnection {
         if (saveAttendeeStmt == null) {
             saveAttendeeStmt = conn.prepareStatement(SAVE_ATTENDEE_SQL, Statement.RETURN_GENERATED_KEYS);
         }
-        int mappedTranee = lookups.getNewTrianeeId(attendee.getDelegateID(), attendee.getCompanyId());
+        int mappedTranee = lookups.getNewTrianeeId(attendee.getDelegateID());
         int mappedCourse = lookups.getMappedCourseInsId(attendee.getCourseID());
         saveAttendeeStmt.setInt(1, mappedTranee);
         saveAttendeeStmt.setInt(2, mappedCourse);

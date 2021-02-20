@@ -111,43 +111,26 @@ public class Lookups {
         }
     }
 
-    private static final String GET_TRAINEE_MAP_SQL = "SELECT ID FROM TRAINEE_MAP WHERE ORIG_ID = ? AND COMPANY_ID = ?";
+    private static final String GET_TRAINEE_MAP_SQL = "SELECT ID FROM TRAINEE_MAP WHERE ORIG_ID = ?";
     private PreparedStatement newTraineeIdStatment = null ;
 
-    public int getNewTrianeeId(int oldId, int companyId) {
+    public int getNewTrianeeId(int oldId) {
         int result = -1;
         try {
             if (newTraineeIdStatment == null) {
                 newTraineeIdStatment = conn.prepareStatement(GET_TRAINEE_MAP_SQL);
             }
             newTraineeIdStatment.setInt(1, oldId);
-            newTraineeIdStatment.setInt(2, companyId);
             try (ResultSet res = newTraineeIdStatment.executeQuery()) {
                 if (res.next()) {
                     result = res.getInt(1);
-                } else {
-                    logger.error("Trainee not found with trainee id {} or for company id = {}. Creating new trainee from company name!", oldId, companyId);
-                    String sql = String.format("SELECT NAME FROM COMPANY_MAP WHERE ORIG_ID = %d", companyId);
-                    try (Statement stmt = conn.createStatement()) {
-                        ResultSet rs = stmt.executeQuery(sql);
-                        if (rs.next()) {
-                            String name = rs.getString(1);
-                            String[] n = name.split(" ");
-                            String forename = n[0] ;
-                            String surname = n.length > 1 ? n[1] : "";
-                            Trainee trainee = new Trainee(forename, surname, companyId);
-                            result = dbConnection.saveTrainee(trainee, this);
-                            trainee.setId(result);
-                            addTrainee(trainee);
-                        }
-                    }
                 }
             }
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
-        logger.info("Looked up trainee id {} AND company id = {} found {}", oldId, companyId, result);
 
+        logger.info("Looked up trainee id {} {} {}", oldId, result > 0 ? "found": "NOT found", result);
         return result;
     }
 

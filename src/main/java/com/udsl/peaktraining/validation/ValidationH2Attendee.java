@@ -50,7 +50,7 @@ public class ValidationH2Attendee {
 
     public boolean validate(ValidationPostAttendee validationPostAttendee, Lookups lookup, ValidationAccessUtilities util){
         int accessTraineeId = util.getTraineeIdFromDeligateId(delegateID);
-        int newTraineeId = lookup.getNewTrianeeId(accessTraineeId, 0);
+        int newTraineeId = lookup.getNewTrianeeId(accessTraineeId);
         int oldTraneeId = lookup.getOldTraineeId(validationPostAttendee.getTraineeId());
         int mappedOrigCourseId = lookup.getOrigCourseId(validationPostAttendee.getCourseId());
         int newCourseIdMapped = lookup.getMappedCourseInsId(courseID);

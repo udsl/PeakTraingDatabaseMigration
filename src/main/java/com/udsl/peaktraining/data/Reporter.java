@@ -84,7 +84,7 @@ public class Reporter {
     }
 
     private int getTraineeMappingId(int forOldTraineeId, int forCoId){
-        return lookups.getNewTrianeeId(forOldTraineeId, forCoId);
+        return lookups.getNewTrianeeId(forOldTraineeId);
     }
 
     private Company getCompany(int coId) {

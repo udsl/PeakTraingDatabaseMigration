@@ -129,21 +129,6 @@ public class ValidationReport {
                     FileUtils.writeStringToFile(file, String.format("Lookup failed for %d\n", h2.getId()), true);
                 }
                 // Validate Access
-//                Optional<ValidationAccessAttendee> access = getAccessAttendee(h2.getOldId());
-//                if (access.isPresent()) {
-//                    if (!h2.validate(access.get())) {
-//                        accessValidationFails++;
-//                        logger.error("Access Validation Error H2 id {}", h2.getId());
-//                    } else {
-//                        accessValidationsGood++;
-//                        logger.info("Access Validated OK H2 id {} ", h2.getId());
-//                    }
-//                    FileUtils.writeStringToFile(file, plusCR(h2.getValidationResult()), true);
-//                }
-//                else{
-//                    FileUtils.writeStringToFile(file, String.format("Access Lookup failed for %d\n", h2.getId()), true);
-//                }
-                FileUtils.writeStringToFile(file, " \n", true);
             }
             String resultStr = String.format("\n\nValidation results: Postgres: OK %d, fails %d. Total should be %d.", validationsGood, validationFails, courseInsCount);
             logger.info(resultStr);
