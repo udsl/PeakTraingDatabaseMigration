@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.udsl.peaktraining.migration.MigrationUtilities.promptEnterKey;
+
 @Component
 public class PeakTrainingMigration {
     private static final Logger logger = LogManager.getLogger(PeakTrainingMigration.class.getName());
@@ -62,10 +64,16 @@ public class PeakTrainingMigration {
     void runMigration() throws SQLException {
         try {
             if (fullMigration) {
+                logger.info("Full migration");
+                promptEnterKey("Company migration");
                 createCompanys();
+                promptEnterKey("Trainee migration");
                 createTrainees();
+                promptEnterKey("Course migration");
                 createCourseDef();
+                promptEnterKey("Course instance migration");
                 createCourseInst();
+                promptEnterKey("Updating course defs");
                 updateCourseDef();
                 attendeeMigration.processAttendants();
             }

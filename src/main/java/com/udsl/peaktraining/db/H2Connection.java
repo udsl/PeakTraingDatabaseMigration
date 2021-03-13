@@ -7,10 +7,10 @@ import org.h2.jdbcx.JdbcDataSource;
 import org.springframework.stereotype.Component;
 import org.h2.tools.Server;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
+import javax.annotation.PostConstruct;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.sql.*;
 
 @Component
 public class H2Connection {
@@ -20,11 +20,19 @@ public class H2Connection {
 
     private Connection conn;
     private Server h2Server = null;
+    private String h2Url;
 
-    public H2Connection() {
+     public H2Connection() {
         try {
+            String hostname = InetAddress.getLocalHost().getHostName();
+            if ("XENOSMILUS".equals(hostname) || "SABERTOOTH".equals(hostname)) { // Home
+                h2Url = "jdbc:h2:tcp://localhost:9092/~/IdeaProjects/PeakTraingDatabaseMigration/app_db/test";
+            } else { // Peak Training
+                h2Url = "jdbc:h2:tcp://localhost:9092/~/IdeaProjects/PeakTraingDatabaseMigration/app_db/test";
+            }
+
             h2Server = Server.createTcpServer().start();
-          } catch (SQLException throwables) {
+          } catch (SQLException | UnknownHostException throwables) {
             throwables.printStackTrace();
             throw new RuntimeException("H2 Connection failure");
         }
@@ -34,8 +42,7 @@ public class H2Connection {
             throw new RuntimeException("Could not start H2 server.");
         }
         ds = new JdbcDataSource();
-        // ds.setURL("jdbc:h2:~/IdeaProjects/PeakTraingDatabaseMigration/app_db/test");
-        ds.setURL("jdbc:h2:tcp://localhost:9092/~/IdeaProjects/PeakTraingDatabaseMigration/app_db/test");
+        ds.setURL(h2Url);
         ds.setUser("sa");
         ds.setPassword("sa");
         try {

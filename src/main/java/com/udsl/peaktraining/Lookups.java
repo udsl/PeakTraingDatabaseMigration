@@ -95,7 +95,7 @@ public class Lookups {
     private PreparedStatement saveTraineeStatment = null ;
 
     public void addTrainee(Trainee trainee) {
-        logger.debug("Adding Trainee from id {} -> new id {}", trainee.getOldId(), trainee.getId());
+        logger.info("Adding Trainee from id {} -> new id {}", trainee.getOldId(), trainee.getId());
         try {
             if (saveTraineeStatment == null) {
                 saveTraineeStatment = conn.prepareStatement(SAVE_TRAINEE_MAP_SQL);

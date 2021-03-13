@@ -14,12 +14,15 @@ public class MSAccess {
     @Value("${msaccess.showsql}")
     boolean showSQL;
 
+    @Value("${msaccess.db}")
+    String accessDb;
+
     private Connection conn = null;
 
     public Connection getConnection() throws SQLException {
         if (conn == null) {
             conn = DriverManager.getConnection(
-                    "jdbc:ucanaccess://C:\\Users\\iango\\Clients\\Peak Training\\Existing System\\Peak_Train.mdb");
+                    "jdbc:ucanaccess://"+accessDb);
         }
         return conn;
     }
