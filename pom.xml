@@ -6,7 +6,7 @@
 
     <groupId>com.udsl</groupId>
     <artifactId>PeakTraingDatabaseMigrationApp</artifactId>
-    <version>3.1</version>
+    <version>3.1.1</version>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
