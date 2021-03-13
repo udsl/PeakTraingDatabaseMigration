@@ -2,6 +2,7 @@ package com.udsl.peaktraining.data;
 
 import com.udsl.peaktraining.Lookups;
 import com.udsl.peaktraining.db.MSAccess;
+import com.udsl.peaktraining.validation.ReportFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -140,14 +141,10 @@ public class Reporter {
     File file;
 
     void clearReportFile() {
-        try {
-            Path path = Paths.get(reportFileName);
-            String header = String.format("Report on Company ID %d\n\n", reportOn);
-            file = new File(reportFileName);
-            FileUtils.writeStringToFile(file, header);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        Path path = Paths.get(reportFileName);
+        String header = String.format("Report on Company ID %d\n\n", reportOn);
+        ReportFile report = new ReportFile(reportFileName);
+        report.writeHeader(header);
     }
 
     void writeToReportFile(String str){

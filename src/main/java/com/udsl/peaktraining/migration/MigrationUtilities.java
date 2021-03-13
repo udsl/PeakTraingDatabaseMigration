@@ -19,7 +19,7 @@ public class MigrationUtilities {
     private MSAccess mAccess ;
 
     @Value("${pauseActive:false}")
-    boolean pauseActive;
+    static boolean pauseActive;
 
     private static final String COUNT_QUERY_SQL = "select count(*) from [?]";
 
@@ -33,8 +33,10 @@ public class MigrationUtilities {
     }
 
     public static void promptEnterKey(String prompt){
-        System.out.println(String.format("\n%s\n",prompt));
-        Scanner scanner = new Scanner(System.in);
-        scanner.nextLine();
+        logger.info("\n\n***** {} *****\n\n", prompt);
+        if (pauseActive) {
+            Scanner scanner = new Scanner(System.in);
+            scanner.nextLine();
+        }
     }
 }

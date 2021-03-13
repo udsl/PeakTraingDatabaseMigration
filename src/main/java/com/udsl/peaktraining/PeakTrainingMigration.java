@@ -6,6 +6,7 @@ import com.udsl.peaktraining.db.DbConnection;
 import com.udsl.peaktraining.db.MSAccess;
 import com.udsl.peaktraining.migration.AttendeeMigration;
 import com.udsl.peaktraining.migration.MigrationUtilities;
+import com.udsl.peaktraining.validation.ReportFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -175,12 +176,11 @@ public class PeakTrainingMigration {
     }
 
     void createTrainees(){
-        File reportFile;
-        reportFile = new File(traineeReportFileName);
-        try{
+        ReportFile reportFile = new ReportFile(traineeReportFileName);
+        try {
             logger.debug("Processing {} trainees records", migrationUtil.getRecordCount("trainees"));
-            String sql = "SELECT [DelegateId], [companyID], [DelegateFirstName], [DelegateSurname] FROM [trainees]";
-            FileUtils.writeStringToFile(reportFile,sql +"\n\n",true);
+             String sql = "SELECT [DelegateId], [companyID], [DelegateFirstName], [DelegateSurname] FROM [trainees]";
+            reportFile.write(sql);
             try (ResultSet rs = mAccess.excuteSQL(sql)) {
                 while (rs.next()) {
                     String.format("Data read: DelegateId - %d, companyID - %d, DelegateFirstName - '%s', DelegateSurname - '%s'",
@@ -191,14 +191,12 @@ public class PeakTrainingMigration {
                     Trainee trainee = new Trainee(rs);
                     int traineeId = dbConnection.saveTrainee(trainee, lookups);
                     trainee.setId(traineeId);
-                    FileUtils.writeStringToFile(reportFile,trainee.toString() +"\n",true);
+                    reportFile.write(trainee.toString());
                     lookups.addTrainee(trainee);
                 }
-            } catch (SQLException e) {
-                e.printStackTrace();
             }
-        } catch(SQLException | IOException throwables) {
-            throwables.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 }
