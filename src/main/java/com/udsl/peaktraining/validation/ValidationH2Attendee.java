@@ -1,7 +1,6 @@
 package com.udsl.peaktraining.validation;
 
 import com.udsl.peaktraining.Lookups;
-import jdk.nashorn.internal.lookup.Lookup;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;

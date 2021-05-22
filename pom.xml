@@ -16,7 +16,7 @@
     </parent>
 
     <properties>
-        <java.version>8</java.version>
+        <java.version>15</java.version>
 
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
 

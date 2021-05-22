@@ -1,6 +1,7 @@
 package com.udsl.peaktraining;
 
 import com.udsl.peaktraining.data.Reporter;
+import com.udsl.peaktraining.template.TemplateImport;
 import com.udsl.peaktraining.validation.ValidationReport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,8 +24,14 @@ public class PeakTraingDataMigrationApp implements CommandLineRunner {
     @Autowired
     ValidationReport validationReport;
 
+    @Autowired
+    TemplateImport templateImport;
+
     @Value("${migration}")
     private boolean doMigration;
+
+    @Value("${doImport}")
+    private boolean doImport;
 
     @Value("${reportdetails}")
     Integer reportOn;
@@ -40,8 +47,11 @@ public class PeakTraingDataMigrationApp implements CommandLineRunner {
     public void run(String... args) throws Exception {
         logger.info("Peak Training data migration starting . . .");
         try {
-            // Migration and reportOn are mutuialy exclusinv
-            if (doMigration) {
+            // Import, Migration and reportOn are mutually exclusive
+            if (doImport){
+                templateImport.createTemplateDataCache();
+            }
+            else if (doMigration) {
                 migration.runMigration();
             }
             else if (reportOn != null){
@@ -51,6 +61,7 @@ public class PeakTraingDataMigrationApp implements CommandLineRunner {
             if (validationReportRequired){
                 validationReport.doReport();
             }
+            logger.info("Peak Training data migration completed without error");
             System.exit(0);
         } catch (Exception e) {
             logger.error("Caught exception {}", e.getMessage(), e);

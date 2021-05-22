@@ -26,6 +26,9 @@ public class Lookups {
     @Value("${clearH2DB}")
     private boolean clearH2DB;
 
+    @Value("${doImport}")
+    private boolean doImport;
+
     @Autowired
     H2Connection conn ;
 
@@ -34,7 +37,7 @@ public class Lookups {
 
     @PostConstruct
     public void init() throws SQLException {
-        if (clearH2DB) {
+        if (clearH2DB && !doImport){
             clearDatabaseTables();
         }
      }

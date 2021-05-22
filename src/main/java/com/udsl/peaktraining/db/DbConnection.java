@@ -30,6 +30,9 @@ public class DbConnection {
     @Value("${clearPostgress}")
     private boolean clearPostgress;
 
+    @Value("${doImport}")
+    private boolean doImport;
+
     @Value("#{'${tablesToClearList}'.split(',')}")
     List<String> tablesClearList;
 
@@ -44,7 +47,7 @@ public class DbConnection {
             } else { // Peak Training
                 conn = DriverManager.getConnection("jdbc:postgresql://192.168.1.127:5432/postgres", "postgres", "password");
             }
-            if (clearPostgress){
+            if (clearPostgress && !doImport){
                 doClearPostgres();
             }
             if (needTransaction) {
