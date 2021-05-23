@@ -49,7 +49,13 @@ public class PeakTraingDataMigrationApp implements CommandLineRunner {
         try {
             // Import, Migration and reportOn are mutually exclusive
             if (doImport){
-                templateImport.createTemplateDataCache();
+                if (templateImport.checkForPreviousImportData()){
+                    throw new RuntimeException("Imported data exists!");
+                }
+                else {
+                    templateImport.createTemplateDataCache();
+                    templateImport.writeCacheToPostgres();
+                }
             }
             else if (doMigration) {
                 migration.runMigration();

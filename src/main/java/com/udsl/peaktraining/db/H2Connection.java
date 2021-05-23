@@ -83,4 +83,22 @@ public class H2Connection {
             throw new RuntimeException("Failed to create prepared statement.");
         }
     }
+
+    public int getSqlInt(String SQL) {
+        int result = -1;
+        try {
+            Statement sqlStatement = conn.createStatement();
+            try (ResultSet res = sqlStatement.executeQuery(SQL)) {
+                if (res.next()) {
+                    result = res.getInt(1);
+                }
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+
+        logger.info("getSqlInt SQL: '{}' returned: {}", SQL, result);
+        return result;
+    }
+
 }

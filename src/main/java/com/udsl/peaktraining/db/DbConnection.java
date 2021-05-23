@@ -2,6 +2,7 @@ package com.udsl.peaktraining.db;
 
 import com.udsl.peaktraining.*;
 import com.udsl.peaktraining.data.*;
+import com.udsl.peaktraining.template.TemplateData;
 import com.udsl.peaktraining.validation.ValidationPostAttendee;
 import com.udsl.peaktraining.validation.ValidationPostCourse;
 import org.apache.logging.log4j.LogManager;
@@ -272,6 +273,39 @@ public class DbConnection {
         saveCourseResultsStmt.executeUpdate();
     }
 
+
+    private static final String SAVE_IMPORTED_TEMPLATE_SQL = "INSERT INTO course_def (name, description, course_number, def_days, default_cert_id) VALUES (?, ?, ?, ?, ?)";
+    PreparedStatement saveImportedTemplateStmt = null ;
+
+    public int saveImportedTemplate(TemplateData template) {
+        int generatedkey = 0;
+        try {
+            if (saveImportedTemplateStmt == null) {
+                saveImportedTemplateStmt = conn.prepareStatement(SAVE_IMPORTED_TEMPLATE_SQL, Statement.RETURN_GENERATED_KEYS);
+            }
+            saveImportedTemplateStmt.setString(1, template.getName());
+            saveImportedTemplateStmt.setString(2, template.getDescription());
+            saveImportedTemplateStmt.setString(3, template.getCourse_number());
+            saveImportedTemplateStmt.setInt(4, template.getDef_days());
+            saveImportedTemplateStmt.setInt(5, template.getDefault_cert_id());
+
+            int inserted = saveImportedTemplateStmt.executeUpdate();
+            if (inserted == 1) {
+                ResultSet rs = saveImportedTemplateStmt.getGeneratedKeys();
+                if (rs.next()) {
+                    generatedkey = rs.getInt(1);
+                    logger.info("Auto Generated TemplateInserted Primary Key {}", generatedkey);
+                }
+            }
+            logger.info("Inserted ID {}, template {}, course {}", generatedkey, template.getName(), template.getDescription());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return generatedkey;
+    }
+
+
+
     private static final String CHECK_COURSE_INS_SQL = "SELECT * FROM course_ins WHERE course_ins_id = ?";
     PreparedStatement checkCourseInsStmt = null ;
     private boolean checkCourseRecord(int courseId) {
@@ -434,6 +468,22 @@ public class DbConnection {
             nameList.add(rs.getString(1));
         }
         return nameList;
+    }
+
+
+    private static final String GET_MAX_COURSE_NUMBER_SQL = "SELECT course_number FROM course_def WHERE course_def_id = (SELECT MAX(course_def_id) FROM course_def)";
+    PreparedStatement getCourseDefMaxNumberStmt = null ;
+
+    public String getCourseDefMaxNumber() throws SQLException {
+        if (getCourseDefMaxNumberStmt == null) {
+            getCourseDefMaxNumberStmt = conn.prepareStatement(GET_MAX_COURSE_NUMBER_SQL);
+        }
+
+        ResultSet rs = getCourseDefMaxNumberStmt.executeQuery();
+        if(rs.next()){
+            return rs.getString(1);
+        }
+        throw new SQLException("No records returned");
     }
 
     public void executeSQL( String sql)throws SQLException{
