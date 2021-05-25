@@ -274,7 +274,11 @@ public class DbConnection {
     }
 
 
-    private static final String SAVE_IMPORTED_TEMPLATE_SQL = "INSERT INTO course_def (name, description, course_number, def_days, default_cert_id) VALUES (?, ?, ?, ?, ?)";
+    private static final String SAVE_IMPORTED_TEMPLATE_SQL = """
+            INSERT INTO course_def 
+            (name, description, course_type, course_number, def_days, default_cert_id, instructor_id, examiner_id, course_elements) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
     PreparedStatement saveImportedTemplateStmt = null ;
 
     public int saveImportedTemplate(TemplateData template) {
@@ -285,9 +289,35 @@ public class DbConnection {
             }
             saveImportedTemplateStmt.setString(1, template.getName());
             saveImportedTemplateStmt.setString(2, template.getDescription());
-            saveImportedTemplateStmt.setString(3, template.getCourse_number());
-            saveImportedTemplateStmt.setInt(4, template.getDef_days());
-            saveImportedTemplateStmt.setInt(5, template.getDefault_cert_id());
+            saveImportedTemplateStmt.setString(3, template.getCourse_type());
+            saveImportedTemplateStmt.setString(4, template.getCourse_number());
+            saveImportedTemplateStmt.setInt(5, template.getDef_days());
+            saveImportedTemplateStmt.setInt(6, template.getDefault_cert_id());
+
+            Integer insId = template.getInstructor_id();
+            if (insId == null) {
+                saveImportedTemplateStmt.setNull(7, Types.INTEGER);
+            }
+            else {
+                saveImportedTemplateStmt.setInt(7, template.getInstructor_id());
+            }
+
+//            Integer examId = template.getExaminer_id();
+//            if (examId == null) {
+//                saveImportedTemplateStmt.setNull(8, Types.INTEGER);
+//            }
+//            else{
+               saveImportedTemplateStmt.setInt(8, template.getExaminer_id());
+//            }
+
+            Array elementArray = null;
+            List<String> elements = template.getCourse_elements();
+            if (elements != null) {
+                String[] strArray = elements.toArray(new String[0]);
+                elementArray = conn.createArrayOf("text", strArray);
+            }
+
+            saveImportedTemplateStmt.setArray(9, elementArray);
 
             int inserted = saveImportedTemplateStmt.executeUpdate();
             if (inserted == 1) {
@@ -304,6 +334,29 @@ public class DbConnection {
         return generatedkey;
     }
 
+
+    private static final String GET_IMPORTED_TEMPLATE_COUNT_SQL = "SELECT COUNT(*) FROM course_def WHERE name = ? AND description = ?";
+    PreparedStatement getImportedTemplateCountStmt = null ;
+
+    public boolean importedTemplateExists(TemplateData template) {
+        try {
+            if (getImportedTemplateCountStmt == null) {
+                getImportedTemplateCountStmt = conn.prepareStatement(GET_IMPORTED_TEMPLATE_COUNT_SQL);
+            }
+            getImportedTemplateCountStmt.setString(1, template.getName());
+            getImportedTemplateCountStmt.setString(2, template.getDescription());
+
+            try (ResultSet rs = getImportedTemplateCountStmt.executeQuery()) {
+                if (rs.next()) {
+                    int result = rs.getInt(1);
+                    return result > 0;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 
 
     private static final String CHECK_COURSE_INS_SQL = "SELECT * FROM course_ins WHERE course_ins_id = ?";
