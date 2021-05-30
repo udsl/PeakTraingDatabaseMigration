@@ -43,6 +43,18 @@ public class TemplateData {
         examiner_id = examinerId;
     }
 
+    public TemplateData(String templateName, String desc, List<String> elements, int defDays, int certType, int courseNum, int examinerId, int instructorId){
+        name = templateName;
+        description = templateName;
+        def_days = defDays;
+        default_cert_id = certType;
+        course_number = "PT:" + courseNum;
+        description = desc;
+        examiner_id = examinerId;
+        instructor_id = instructorId;
+        course_elements = elements;
+    }
+
     public TemplateData(String templateName, List<String> elements, int defDays, int certType, int courseNum, int examinerId, int instructorId){
         name = templateName;
         description = templateName;
@@ -53,4 +65,5 @@ public class TemplateData {
         instructor_id = instructorId;
         course_elements = elements;
     }
+
 }
