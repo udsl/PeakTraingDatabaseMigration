@@ -574,4 +574,46 @@ public class DbConnection {
             logger.debug("Result set = '{}'", resultsetFieldsAndValuesToString(rs));
         }
     }
+
+    private PreparedStatement getExistingKeyStmt = null ;
+    private final static String EXISTING_KEY_SQL = "SELECT course_def_id FROM course_def WHERE UPPER(name) = ? AND name = description";
+
+    public int getExistingKey(String key){
+        try {
+            if (getExistingKeyStmt == null) {
+                getExistingKeyStmt = conn.prepareStatement(EXISTING_KEY_SQL);
+            }
+            getExistingKeyStmt.setString(1, key);
+            ResultSet rs = getExistingKeyStmt.executeQuery();
+            if(rs.next()){
+                return rs.getInt(1);
+            }
+            logger.debug("Record not found for {}", key);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        throw new RuntimeException("Key not found for " + key);
+    }
+
+    private PreparedStatement setElementsStmt = null ;
+    private final static String SET_ELEMENTS__SQL = "UPDATE course_def SET course_elements = ? WHERE course_def_id = ?";
+
+    public void setElements(int id, List<String> elements){
+        try {
+            if (setElementsStmt == null) {
+                setElementsStmt = conn.prepareStatement(SET_ELEMENTS__SQL);
+            }
+
+            String[] strArray = elements.toArray(new String[0]);
+            Array elementArray = conn.createArrayOf("text", strArray);
+            setElementsStmt.setArray(1, elementArray);
+            setElementsStmt.setInt(2, id);
+            int updated = setElementsStmt.executeUpdate();
+            logger.debug("{} records updated for {}", updated, id);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+    }
 }

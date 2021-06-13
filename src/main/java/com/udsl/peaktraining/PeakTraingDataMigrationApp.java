@@ -55,6 +55,7 @@ public class PeakTraingDataMigrationApp implements CommandLineRunner {
                 else {
                     templateImport.createTemplateDataCache();
                     templateImport.writeCacheToPostgres();
+                    templateImport.performUpdatesToImported();
                 }
             }
             else if (doMigration) {

@@ -26,10 +26,7 @@ public class TemplateImport {
     private static int currentCourseNum ;
     private static int inserted = 0;
 
-    private static final int TOM_HARDY = 5;
     private static final int DAVE_HARDY = 1;
-    private static final int JONATHON_BICKLEY = 2;
-    private static final int GRAHAM_BARBER = 3;
 
     private static final int CERT_TYPE_1 = 1;
     private static final int CERT_TYPE_2 = 2;
@@ -47,6 +44,7 @@ public class TemplateImport {
     private static final String BASIC_WINCHING = "BASIC WINCHING PROCEDURES AND TECHNIQUES";
     private static final String SIDE_BED = "SIDE BED RECOVERY TECHNIQUES AND PROCEDURES";
     private static final String SPEC_LIGHT = "SPEC LIGHT RECOVERY TECHNIQUES AND PROCEDURES";
+    private static final String BASIC_FIRST_AID = "BASIC FIRST AID PROCEDURE";
 
     public boolean checkForPreviousImportData(){
         int importedCount = h2Conn.getSqlInt( "SELECT COUNT(*) FROM TEMPLATES_INSERTED") ;
@@ -70,7 +68,78 @@ public class TemplateImport {
         }
     }
 
-    // cert type 1 Site Safety
+    public void performUpdatesToImported() {
+        List<String> elements = List.of(HELTH_SAFTY_1974,
+                "SITE SAFETY AWARENESS",
+                PPE_SELECTION,
+                "EMERGENCY FIRST AID PROCEDURES",
+                "HAZARDS AND RISK ASSESSMENTS",
+                "FIRE @ WORK PROCEDURES",
+                CONTROL_OF_SUBSISTENCE);
+        updateExisting("SAFETY AWARENESS", elements);
+
+        elements = List.of(BASIC_FIRST_AID,
+                "SITE EQUIPMENT",
+                "BASIC CARE AND MAINTENANCE OF EQUIPMENT",
+                "BASIC MACHINERY KNOWLEDGE",
+                "SAFE OPERATION OF THE ABRASIVE WHEEL");
+
+        updateExisting("ABRASIVE WHEEL", elements);
+
+
+        elements = List.of("BASIC SLINGING SIGNALS",
+                "SAFETY CHECKS",
+                BASIC_FIRST_AID,
+                "PREPARATION OF LOADS FOR LIFTING",
+                "BASIC SLINGING TECHNIQUES");
+
+        updateExisting("SLINGING TECHNIQUES", elements);
+
+
+        elements = List.of("INTRODUCTION & PRE TEST",
+                "OPERATING FUNCTIONS AND CONTROLS",
+                "PRESTART PROCEDURES AND VISUAL CHECKS",
+                "PLATFORMS, SAFETY PRECAUTIONS IN WORKING AREA",
+                "SCISSOR OPERATIONS",
+                "SITING AND STABILITY, MAINTENANCE AND INSPECTIONS",
+                "WIND EFFECTS WITH PLATFORMS");
+
+        updateExisting("ACCESS PLATFORM", elements);
+
+
+        elements = List.of("BASIC SIGNALING TECHNIQUES",
+                "SAFETY CHECKS",
+                "SAFE OPERATION OF TEH ABOVE PLANT EQUIPMENT",
+                "PREPARATION OF LOAD FOR LIFTING");
+
+        updateExisting("PENDANT CRANE", elements);
+
+
+        elements = List.of("SITE SAFETY CHECKS TO BE MADE",
+                "SAFETY EQUIPMENT TO BE USED",
+                "COMMUNICATION SKILLS",
+                "BANKSMAN SIGNALS",
+                "BANKSMAN PROCEDURES AND TECHNIQUES",
+                "BASIC EMERGENCY FIRST AID PROCEDURES"
+        );
+
+        updateExisting("SLINGER BANKSMAN", elements);
+
+
+        elements = List.of("BASIC CARE AND MAINTENANCE OF THE CHAINSAW",
+                "BASICS OF A CHAINSAW",
+                "BASIC FIRST AID PROCEDURES",
+                "BASICS OF SAFETY EQUIPMENT TO BE WORN",
+                "PUBLIC SAFETY AWARENESS",
+                "SAFE OPERATION OF THE CHAINSAW (FELL WORK, CROSSCUT AND STACK)"
+        );
+
+        updateExisting("CHAINSAW SAFETY AWARENESS", elements);
+
+
+    }
+
+     // cert type 1 Site Safety
     private void addType1Certs(){
         // PEAK_update1.pdf
 
@@ -155,7 +224,7 @@ public class TemplateImport {
                 "LORRY LOADING AND UNLOADING PROCEDURES",
                 "BAIS HANDOVER PROCEDURES",
                 "VEHICLE EXAMINATION BEFORE LEAVING SITE");
-        addToCache(new TemplateData("LORRY LOADING AND UNLOADING SAFETY AWARENESS", elements, 1, CERT_TYPE_1,  currentCourseNum++, JONATHON_BICKLEY, JONATHON_BICKLEY));
+        addToCache(new TemplateData("LORRY LOADING AND UNLOADING SAFETY AWARENESS", elements, 1, CERT_TYPE_1,  currentCourseNum++, DAVE_HARDY, DAVE_HARDY));
 
         elements = List.of("LEGISLATION AND CODES OF PRACTICE",
                 "GAS PROPERTIES AND HAZARDS",
@@ -191,7 +260,7 @@ public class TemplateImport {
                 "BASIC OPERATING SKILLS",
                 "IDENTIFY LOAD AND TOWING CAPACITIES",
                 "LEGAL AND PRACTICAL HIGHWAY REQUIREMENTS");
-        addToCache(new TemplateData("UTILITY VEHICLE SAFETY AWARENESS", elements, 1, CERT_TYPE_1,  currentCourseNum++, GRAHAM_BARBER, DAVE_HARDY));
+        addToCache(new TemplateData("UTILITY VEHICLE SAFETY AWARENESS", elements, 1, CERT_TYPE_1,  currentCourseNum++, DAVE_HARDY, DAVE_HARDY));
 
         elements = List.of("LEGISLATION RELATING TO PESTICIDE BOOM SPRAYING",
                 "KNOWLEDGE OF THE TRACTOR MOUNTED BOOM SPRAYER",
@@ -429,6 +498,14 @@ public class TemplateImport {
                 "SAFETY CHECKS AND CLOSE DOWN PROCEDURES");
         addToCache(new TemplateData("WHEELED LOADER SITE SAFETY AWARENESS", "3CX BASIC OPERATOR", elements, 2, CERT_TYPE_1,  currentCourseNum++, DAVE_HARDY, DAVE_HARDY));
 
+        elements = List.of("SITE SAFETY CHECKS TO BE MADE",
+                "SAFETY EQUIPMENT TO BE USED",
+                "COMMUNICATION SKILLS BETWEEN BANKSMAN AND VEHICLE OPERATOR",
+                "VEHICLE AWARENESS INCLUDING HAZARDS",
+                "BANKSMAN PROCEDURES AND TECHNIQUES FOR VEHICLE MOVEMENT",
+                "BASIC EMERGENCY FIRST AID PROCEDURES");
+        addToCache(new TemplateData("VEHICLE BANKSMAN", elements, 1, CERT_TYPE_1,  currentCourseNum++, DAVE_HARDY, DAVE_HARDY));
+
 /*
         elements = List.of("",
                 "",
@@ -449,11 +526,11 @@ public class TemplateImport {
  */
 
         // PEAK_update1.pdf
-        addToCache(new TemplateData("FALL ARRESTER", "SAFETY HARNESS TRAINING", "SITE SAFETY AWARENESS - BASIC HARNESS REGULATIONS", 1, CERT_TYPE_2,  currentCourseNum++, TOM_HARDY));
-        addToCache(new TemplateData("WORKING @ HEIGHTS", "WORKING @ HEIGHTS SAFTY AWARENESS", "SITE SAFETY", 1, CERT_TYPE_2,  currentCourseNum++, TOM_HARDY));
-        addToCache(new TemplateData("LOADING SHOVEL", "JCB436E LOADING SHOVEL", "SITE SAFETY AWARENESS - BASIC OPERATOR", 1, CERT_TYPE_2,  currentCourseNum++, TOM_HARDY));
-        addToCache(new TemplateData("MOBILE SHREDDER", "MOBILE SHREDDER", "SITE SAFETY - BASIC OPERATOR", 1, CERT_TYPE_2,  currentCourseNum++, TOM_HARDY));
-        addToCache(new TemplateData("HGV SHUNTER", "ON SITE HGV OPERATOR", "SITE SAFETY BASIC SHUNTING OPERATOR", 1, CERT_TYPE_2,  currentCourseNum++, TOM_HARDY));
+        addToCache(new TemplateData("FALL ARRESTER", "SAFETY HARNESS TRAINING", "SITE SAFETY AWARENESS - BASIC HARNESS REGULATIONS", 1, CERT_TYPE_2,  currentCourseNum++, DAVE_HARDY));
+        addToCache(new TemplateData("WORKING @ HEIGHTS", "WORKING @ HEIGHTS SAFTY AWARENESS", "SITE SAFETY", 1, CERT_TYPE_2,  currentCourseNum++, DAVE_HARDY));
+        addToCache(new TemplateData("LOADING SHOVEL", "JCB436E LOADING SHOVEL", "SITE SAFETY AWARENESS - BASIC OPERATOR", 1, CERT_TYPE_2,  currentCourseNum++, DAVE_HARDY));
+        addToCache(new TemplateData("MOBILE SHREDDER", "MOBILE SHREDDER", "SITE SAFETY - BASIC OPERATOR", 1, CERT_TYPE_2,  currentCourseNum++, DAVE_HARDY));
+        addToCache(new TemplateData("HGV SHUNTER", "ON SITE HGV OPERATOR", "SITE SAFETY BASIC SHUNTING OPERATOR", 1, CERT_TYPE_2,  currentCourseNum++, DAVE_HARDY));
 
         // PEAK_update2.pdf
         addToCache(new TemplateData("ROAD SWEEPER", "ON SITE ROAD SWEEPER", "SITE SAFETY - BASIC OPERATOR", 1, CERT_TYPE_2,  currentCourseNum++, DAVE_HARDY));
@@ -470,7 +547,7 @@ public class TemplateImport {
     }
 
     private void addType3Certs(){
-  //      addToCache(new TemplateData("", "", 1, CERT_TYPE_3,  currentCourseNum++, TOM_HARDY));
+  //      addToCache(new TemplateData("", "", 1, CERT_TYPE_3,  currentCourseNum++, DAVE_HARDY));
     }
 
     private void addToCache( TemplateData data){
@@ -512,4 +589,14 @@ public class TemplateImport {
         }
         logger.info("Templates inserted - {}", inserted);
     }
+
+
+    private void updateExisting(String key, List<String> elements) {
+        int id = dbConnection.getExistingKey(key);
+        if (id > 0){
+            dbConnection.setElements(id, elements);
+        }
+    }
+
+
 }
